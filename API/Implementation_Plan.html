@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NestifyND Implementation Plan</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 1in;
+        }
+        body {
+            font-family: 'Calibri', 'Arial', sans-serif;
+            font-size: 11pt;
+            line-height: 1.15;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #1f4e78;
+            margin-top: 12pt;
+            margin-bottom: 6pt;
+            page-break-after: avoid;
+        }
+        h2 {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #1f4e78;
+            margin-top: 12pt;
+            margin-bottom: 6pt;
+            page-break-after: avoid;
+        }
+        h3 {
+            font-size: 12pt;
+            font-weight: bold;
+            margin-top: 10pt;
+            margin-bottom: 4pt;
+            page-break-after: avoid;
+        }
+        p {
+            margin: 6pt 0;
+            text-align: justify;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20pt;
+            border-bottom: 2pt solid #1f4e78;
+            padding-bottom: 10pt;
+        }
+        .header h1 {
+            font-size: 20pt;
+            margin: 0;
+            color: #1f4e78;
+        }
+        .header p {
+            margin: 4pt 0;
+            font-size: 10pt;
+            color: #666;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10pt 0;
+            font-size: 10pt;
+        }
+        table th {
+            background-color: #1f4e78;
+            color: white;
+            padding: 6pt;
+            text-align: left;
+            font-weight: bold;
+            border: 1pt solid #1f4e78;
+        }
+        table td {
+            padding: 6pt;
+            border: 1pt solid #ddd;
+        }
+        .timeline {
+            margin: 10pt 0;
+        }
+        .phase {
+            margin: 8pt 0;
+            padding-left: 12pt;
+        }
+        .phase-title {
+            font-weight: bold;
+            color: #1f4e78;
+        }
+        .feature-section {
+            margin: 12pt 0;
+            padding: 10pt;
+            background-color: #f8f9fa;
+            border-left: 3pt solid #1f4e78;
+        }
+        .feature-section h3 {
+            margin-top: 0;
+            margin-bottom: 8pt;
+            color: #1f4e78;
+            font-size: 13pt;
+        }
+        .feature-item {
+            margin: 6pt 0;
+            padding: 4pt 0;
+        }
+        .feature-subsection {
+            margin: 8pt 0 8pt 20pt;
+        }
+        .feature-subsection ul {
+            margin: 4pt 0;
+        }
+        ul {
+            margin: 6pt 0;
+            padding-left: 20pt;
+        }
+        li {
+            margin: 3pt 0;
+        }
+        .highlight {
+            background-color: #fff2cc;
+            padding: 2pt 4pt;
+        }
+        .footer {
+            margin-top: 20pt;
+            padding-top: 10pt;
+            border-top: 1pt solid #ddd;
+            font-size: 9pt;
+            color: #666;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>NestifyND Implementation Plan</h1>
+        <p><strong>Project Duration:</strong> 1.5 Months (6 Weeks) | <strong>Status:</strong> Backend 95% Complete | Frontend Overhaul Required</p>
+        <p><strong>Target:</strong> Production-Ready Full-Stack Application</p>
+    </div>
+
+    <h2>Executive Summary</h2>
+    <p>The NestifyND backend is 95% complete and production-ready. The frontend requires a complete overhaul as the current structure is broken and needs to be rebuilt from the ground up. This plan prioritizes frontend foundation work first, then basic backend integrations, followed by advanced features over 6 weeks.</p>
+
+    <h2>Current Status</h2>
+    <p><strong>Backend:</strong> Core features implemented including routine/task management, role-based access control, reporting system, and AI integration. Ready for frontend integration.</p>
+    <p><strong>Frontend:</strong> <span class="highlight">Completely broken - requires full rebuild</span> of design system, component structure, layout, and architecture to align with backend.</p>
+
+    <h2>Implementation Timeline</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Week</th>
+                <th>Phase</th>
+                <th>Key Deliverables</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Week 1</strong></td>
+                <td>Frontend Foundation</td>
+                <td>Design system, component structure, layout fixes, UI modes</td>
+            </tr>
+            <tr>
+                <td><strong>Week 2</strong></td>
+                <td>Basic Backend Integration</td>
+                <td>Auth, routines, tasks - core CRUD operations</td>
+            </tr>
+            <tr>
+                <td><strong>Week 3</strong></td>
+                <td>Basic Features Completion</td>
+                <td>Dashboard, active routine, task actions (snooze/dismiss)</td>
+            </tr>
+            <tr>
+                <td><strong>Week 4-5</strong></td>
+                <td>Advanced Features</td>
+                <td>Gamification, AI, reporting, calendar integration</td>
+            </tr>
+            <tr>
+                <td><strong>Week 5-6</strong></td>
+                <td>Role Features & Testing</td>
+                <td>Therapist dashboard, caregiver features, admin panel, integration testing</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Implementation Phases</h2>
+    
+    <div class="feature-section">
+        <h3>Phase 1: Frontend Foundation & Structure Fix (Week 1)</h3>
+        <div class="feature-item"><strong>Design System:</strong> Color palettes, typography, spacing, component library foundation</div>
+        <div class="feature-item"><strong>Component Structure:</strong> Reusable UI components (Button, Input, Card, Modal), component hierarchy</div>
+        <div class="feature-item"><strong>Layout System:</strong> Responsive grid, navigation structure, broken layout fixes</div>
+        <div class="feature-item"><strong>UI Modes:</strong> Light, dark, high-contrast, low-distraction themes with CSS variables and persistence</div>
+        <div class="feature-item"><strong>Routing:</strong> Role-based routing, navigation guards, route protection</div>
+        <div class="feature-item"><strong>State Management:</strong> API service layer, error handling, loading states</div>
+    </div>
+
+    <div class="feature-section">
+        <h3>Phase 2: Basic Backend Integration (Week 2)</h3>
+        <div class="feature-item"><strong>Authentication:</strong> Login, register, JWT token management, session handling</div>
+        <div class="feature-item"><strong>User Management:</strong> User profile, role-based access, UI mode preferences</div>
+        <div class="feature-item"><strong>Routine Integration:</strong> Create, read, update, delete routines, list user routines</div>
+        <div class="feature-item"><strong>Task Integration:</strong> Create, read, update, delete tasks, fetch tasks from active routine</div>
+        <div class="feature-item"><strong>Active Routine System:</strong> Set/get active routine, enforce single active routine</div>
+        <div class="feature-item"><strong>Error Handling:</strong> API error handling, loading states, user feedback</div>
+    </div>
+
+    <div class="feature-section">
+        <h3>Phase 3: Basic Features Completion (Week 3)</h3>
+        <div class="feature-item"><strong>Dashboard:</strong> Home dashboard with quick stats, active routine overview, recent activity</div>
+        <div class="feature-item"><strong>Routine Management UI:</strong> Routine builder interface, scheduling configuration, settings</div>
+        <div class="feature-item"><strong>Task Management UI:</strong> Task list view, task detail view, task creation/editing forms</div>
+        <div class="feature-item"><strong>Task Actions:</strong> Complete task toggle, snooze functionality (5min+), dismiss with caregiver notification</div>
+        <div class="feature-item"><strong>Reminder Display:</strong> Show reminders for active routine tasks, reminder notifications</div>
+        <div class="feature-item"><strong>Activity Feed:</strong> Display user activity logs, activity history</div>
+    </div>
+
+    <div class="feature-section">
+        <h3>Phase 4: Advanced Features (Weeks 4-5)</h3>
+        <div class="feature-subsection">
+            <strong>Gamification System:</strong>
+            <ul>
+                <li>Streak tracking (current and longest streaks)</li>
+                <li>Badge showcase with unlock animations</li>
+                <li>Achievement system with progress tracking</li>
+                <li>Points system display and history</li>
+                <li>Progress charts and visualizations</li>
+                <li>Streak calendar view</li>
+            </ul>
+        </div>
+        <div class="feature-subsection">
+            <strong>AI Features:</strong>
+            <ul>
+                <li>AI chatbot interface with message history</li>
+                <li>AI routine generation with Q&A flow</li>
+                <li>Routine suggestions display and one-click creation</li>
+                <li>Context-aware AI responses</li>
+            </ul>
+        </div>
+        <div class="feature-subsection">
+            <strong>Reporting System:</strong>
+            <ul>
+                <li>Weekly report dashboard with data visualization</li>
+                <li>Metrics display (reminders, completions, snoozes, dismissals)</li>
+                <li>CSV download functionality</li>
+                <li>Report history and trends</li>
+            </ul>
+        </div>
+        <div class="feature-subsection">
+            <strong>Calendar Integration:</strong>
+            <ul>
+                <li>Calendar view for routines and tasks</li>
+                <li>Date range filtering</li>
+                <li>Event display and management</li>
+            </ul>
+        </div>
+        <div class="feature-subsection">
+            <strong>Motivational Features:</strong>
+            <ul>
+                <li>Motivational quotes display</li>
+                <li>Quote generation based on user behavior</li>
+                <li>Quote integration in reminders</li>
+            </ul>
+        </div>
+        <div class="feature-item" style="margin-top: 8pt;"><strong>Testing:</strong> Integration testing and performance optimization included in this phase</div>
+    </div>
+
+    <div class="feature-section">
+        <h3>Phase 5: Role Features & Finalization (Weeks 5-6)</h3>
+        <div class="feature-subsection">
+            <strong>Therapist Dashboard:</strong>
+            <ul>
+                <li>Client list and management interface</li>
+                <li>Client assignment functionality</li>
+                <li>Client progress tracking and analytics</li>
+                <li>Individual client reports</li>
+                <li>Activity monitoring for assigned clients</li>
+            </ul>
+        </div>
+        <div class="feature-subsection">
+            <strong>Caregiver Features:</strong>
+            <ul>
+                <li>Real-time notification system for reminders and dismissals</li>
+                <li>Assigned users view and monitoring</li>
+                <li>Limited override capabilities UI</li>
+                <li>Activity monitoring dashboard</li>
+            </ul>
+        </div>
+        <div class="feature-subsection">
+            <strong>Admin Panel:</strong>
+            <ul>
+                <li>User management interface (CRUD operations)</li>
+                <li>Role assignment interface</li>
+                <li>Plan management and updates</li>
+                <li>System-wide reports and analytics</li>
+                <li>Configuration management</li>
+            </ul>
+        </div>
+        <div class="feature-item" style="margin-top: 8pt;"><strong>Finalization:</strong> End-to-end testing, user acceptance testing, production build optimization, and deployment preparation</div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>Current Frontend Status</h2>
+    <p><strong>Critical Situation:</strong> The frontend is currently in a broken state and requires complete structural overhaul. The existing codebase has significant issues with component architecture, layout structure, routing, and state management that prevent effective backend integration.</p>
+    <p><strong>Key Issues Identified:</strong></p>
+    <ul>
+        <li>Broken component structure and hierarchy</li>
+        <li>Inconsistent layout system causing rendering issues</li>
+        <li>Non-functional routing and navigation</li>
+        <li>Missing or incomplete design system</li>
+        <li>UI mode system not properly implemented</li>
+        <li>State management not properly configured</li>
+        <li>API integration layer incomplete or broken</li>
+    </ul>
+    <p><strong>Approach:</strong> This implementation plan prioritizes fixing the frontend foundation first (Week 1) before attempting any backend integration. A solid, working frontend structure is essential for successful integration and feature development. The rebuild will establish proper component architecture, design system, routing, and state management before connecting to backend APIs.</p>
+    <p><strong>Impact:</strong> This frontend rebuild is the critical path item that must be completed before any meaningful progress can be made on feature integration. Once the foundation is solid, backend integration and feature development can proceed efficiently.</p>
+
+    <div class="footer">
+        <p><strong>Document Version:</strong> 1.0 | <strong>Prepared:</strong> 2025-01-XX | <strong>Timeline:</strong> 6 Weeks (1.5 Months) | <strong>Status:</strong> Ready for Execution</p>
+    </div>
+</body>
+</html>

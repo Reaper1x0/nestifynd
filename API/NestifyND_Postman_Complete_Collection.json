@@ -1,0 +1,255 @@
+{
+  "info": {
+    "name": "NestifyND API - Complete Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/admin/users",
+              "host": [
+                "http://localhost:5000/admin/users"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Assign Role",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "http://localhost:5000/admin/assign-role",
+              "host": [
+                "http://localhost:5000/admin/assign-role"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"123\",\n  \"role\": \"Therapist\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assignments",
+      "item": [
+        {
+          "name": "Assign Therapist",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "http://localhost:5000/assignments/therapist",
+              "host": [
+                "http://localhost:5000/assignments/therapist"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"123\",\n  \"therapistId\": \"456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Assign Caregiver",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "http://localhost:5000/assignments/caregiver",
+              "host": [
+                "http://localhost:5000/assignments/caregiver"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"123\",\n  \"caregiverId\": \"456\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Download Weekly Report",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/reports/weekly/download",
+              "host": [
+                "http://localhost:5000/reports/weekly/download"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles & Plans",
+      "item": [
+        {
+          "name": "Get Roles",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/roles",
+              "host": [
+                "http://localhost:5000/roles"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Plans",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/plans",
+              "host": [
+                "http://localhost:5000/plans"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quotes",
+      "item": [
+        {
+          "name": "Get Daily Quote",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/quotes/daily",
+              "host": [
+                "http://localhost:5000/quotes/daily"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Discount Codes",
+      "item": [
+        {
+          "name": "Apply Discount",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "http://localhost:5000/discounts/apply",
+              "host": [
+                "http://localhost:5000/discounts/apply"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SUMMER15\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Activity Logs",
+      "item": [
+        {
+          "name": "Get User Activity",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/activity/user",
+              "host": [
+                "http://localhost:5000/activity/user"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
