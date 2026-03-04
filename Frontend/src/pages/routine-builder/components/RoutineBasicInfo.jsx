@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Input from '../../../components/ui/Input';
 
@@ -18,6 +18,17 @@ const RoutineBasicInfo = ({
     color: formData.color || '#4F46E5',
     icon: formData.icon || 'Calendar'
   });
+
+  // Sync with parent formData when it changes (e.g., from AI routine or template)
+  useEffect(() => {
+    setLocalData({
+      name: formData.name || '',
+      description: formData.description || '',
+      category: formData.category || 'daily',
+      color: formData.color || '#4F46E5',
+      icon: formData.icon || 'Calendar'
+    });
+  }, [formData.name, formData.description, formData.category, formData.color, formData.icon]);
 
   const categories = [
     { id: 'daily', name: 'Daily Routine', icon: 'Sun', color: '#F59E0B' },
@@ -220,7 +231,7 @@ const RoutineBasicInfo = ({
                     w-10 h-10 rounded-lg flex items-center justify-center border-2 transition-all duration-200
                     focus:outline-none focus:ring-2 focus:ring-primary
                     ${localData.icon === iconName
-                      ? 'border-primary bg-primary-50' :'border-border bg-surface hover:border-primary-200'
+                      ? 'border-primary bg-primary-50' : 'border-border bg-surface hover:border-primary-200 text-gray-600'
                     }
                     ${accessibilitySettings.reducedMotion ? 'transition-none' : ''}
                   `}
@@ -230,7 +241,8 @@ const RoutineBasicInfo = ({
                   <Icon 
                     name={iconName} 
                     size={20} 
-                    color={localData.icon === iconName ? localData.color : 'currentColor'}
+                    color={localData.icon === iconName ? localData.color : '#6B7280'}
+                    className={localData.icon !== iconName ? 'opacity-90' : ''}
                   />
                 </button>
               ))}

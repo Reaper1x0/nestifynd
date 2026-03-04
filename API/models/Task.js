@@ -69,6 +69,11 @@ const taskSchema = new mongoose.Schema({
     type: Number, // in minutes
     default: 15
   },
+  completionCriteria: {
+    type: String,
+    enum: ['manual', 'timer', 'photo', 'location'],
+    default: 'manual'
+  },
   settings: {
     allowSnooze: {
       type: Boolean,
@@ -127,6 +132,16 @@ taskSchema.methods.dismiss = function() {
   this.isSnoozed = false;
   this.snoozedUntil = null;
   return this.save();
+};
+
+// Clear snooze if snoozedUntil has passed
+taskSchema.methods.clearExpiredSnooze = function() {
+  if (this.isSnoozed && this.snoozedUntil && this.snoozedUntil < new Date()) {
+    this.isSnoozed = false;
+    this.snoozedUntil = null;
+    return this.save();
+  }
+  return Promise.resolve(this);
 };
 
 // Method to check if task is due

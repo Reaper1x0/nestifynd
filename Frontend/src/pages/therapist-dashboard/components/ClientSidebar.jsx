@@ -8,6 +8,8 @@ const ClientSidebar = ({
   clients, 
   selectedClient, 
   onClientSelect, 
+  onAddClient,
+  onClientSettings,
   accessibilitySettings 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,17 +24,17 @@ const ClientSidebar = ({
   ];
 
   const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (client.id ? String(client.id).toLowerCase() : '').includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const getQuickStats = () => {
     const totalClients = clients.length;
-    const avgCompletion = Math.round(
-      clients.reduce((sum, client) => sum + client.completionRate, 0) / totalClients
-    );
+    const avgCompletion = totalClients > 0
+      ? Math.round(clients.reduce((sum, client) => sum + client.completionRate, 0) / totalClients)
+      : 0;
     const totalUnread = clients.reduce((sum, client) => sum + client.unreadMessages, 0);
     
     return { totalClients, avgCompletion, totalUnread };
@@ -48,8 +50,8 @@ const ClientSidebar = ({
       ${accessibilitySettings.reducedMotion ? 'transition-none' : ''}
     `}>
       {/* Header */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-4">
+      <div className="p-3 border-b border-border">
+        <div className="flex items-center justify-between mb-2">
           {!isCollapsed && (
             <h2 className="text-lg font-semibold text-text-primary">
               Clients
@@ -67,7 +69,7 @@ const ClientSidebar = ({
         {!isCollapsed && (
           <>
             {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-3 gap-1.5 mb-2">
               <div className="text-center p-2 bg-surface-secondary rounded-lg">
                 <div className="text-lg font-bold text-text-primary">
                   {stats.totalClients}
@@ -95,7 +97,7 @@ const ClientSidebar = ({
             </div>
 
             {/* Search */}
-            <div className="mb-4">
+            <div className="mb-2">
               <Input
                 type="search"
                 placeholder="Search clients..."
@@ -106,13 +108,13 @@ const ClientSidebar = ({
             </div>
 
             {/* Status Filters */}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {statusFilters.map((filter) => (
                 <button
                   key={filter.value}
                   onClick={() => setStatusFilter(filter.value)}
                   className={`
-                    w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm
+                    w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm
                     transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary
                     ${statusFilter === filter.value
                       ? 'bg-primary-50 text-primary border border-primary-200' :'text-text-secondary hover:text-text-primary hover:bg-surface-secondary'
@@ -121,9 +123,9 @@ const ClientSidebar = ({
                   `}
                   aria-pressed={statusFilter === filter.value}
                 >
-                  <span>{filter.label}</span>
+                  <span className="flex-1 text-left">{filter.label}</span>
                   <span className={`
-                    px-2 py-1 rounded-full text-xs font-medium
+                    w-7 text-center tabular-nums px-2 py-0.5 rounded-full text-xs font-medium shrink-0
                     ${statusFilter === filter.value
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-surface-secondary text-text-tertiary'
@@ -139,7 +141,7 @@ const ClientSidebar = ({
       </div>
 
       {/* Client List */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 min-h-0">
         {isCollapsed ? (
           <div className="space-y-2">
             {filteredClients.map((client) => (
@@ -169,7 +171,7 @@ const ClientSidebar = ({
             ))}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filteredClients.length === 0 ? (
               <div className="text-center py-8 text-text-secondary">
                 <Icon name="Search" size={32} className="mx-auto mb-2 opacity-50" />
@@ -192,25 +194,31 @@ const ClientSidebar = ({
 
       {/* Footer Actions */}
       {!isCollapsed && (
-        <div className="p-4 border-t border-border">
-          <Button
-            variant="outline"
-            iconName="Plus"
-            iconPosition="left"
-            onClick={() => {/* Add new client */}}
-            className="w-full mb-2"
-          >
-            Add New Client
-          </Button>
-          <Button
-            variant="ghost"
-            iconName="Settings"
-            iconPosition="left"
-            onClick={() => {/* Settings */}}
-            className="w-full text-sm"
-          >
-            Client Settings
-          </Button>
+        <div className="p-3 border-t border-border shrink-0">
+          {onAddClient && (
+            <Button
+              variant="outline"
+              iconName="Plus"
+              iconPosition="left"
+              onClick={onAddClient}
+              className="w-full mb-2"
+            >
+              Add New Client
+            </Button>
+          )}
+          {onClientSettings && (
+            <Button
+              variant="ghost"
+              iconName="Settings"
+              iconPosition="left"
+              onClick={onClientSettings}
+              disabled={!selectedClient}
+              className="w-full text-sm"
+              title={!selectedClient ? 'Select a client to view settings' : 'View client settings'}
+            >
+              Client Settings
+            </Button>
+          )}
         </div>
       )}
     </div>

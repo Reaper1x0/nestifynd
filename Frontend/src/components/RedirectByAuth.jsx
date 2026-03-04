@@ -12,6 +12,12 @@ export default function RedirectByAuth() {
     return <Navigate to="/login" replace />;
   }
 
-  const dashboardPath = user?.role === 'therapist' ? '/therapist-dashboard' : '/home-dashboard';
+  const dashboardPath = user?.role === 'admin'
+    ? '/admin-dashboard'
+    : user?.role === 'therapist'
+    ? '/therapist-dashboard'
+    : user?.role === 'caregiver'
+    ? '/caregiver-dashboard'
+    : '/home-dashboard';
   return <Navigate to={dashboardPath} replace />;
 }

@@ -35,20 +35,31 @@ const ClientCard = ({
   };
 
   const formatLastActivity = (timestamp) => {
-    const now = new Date();
-    const lastActivity = new Date(timestamp);
-    const diffHours = Math.floor((now - lastActivity) / (1000 * 60 * 60));
-    
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
+    if (!timestamp) return '—';
+    try {
+      const now = new Date();
+      const lastActivity = new Date(timestamp);
+      if (isNaN(lastActivity.getTime())) return '—';
+      const diffHours = Math.floor((now - lastActivity) / (1000 * 60 * 60));
+      if (diffHours < 1) return 'Just now';
+      if (diffHours < 24) return `${diffHours}h ago`;
+      const diffDays = Math.floor(diffHours / 24);
+      return `${diffDays}d ago`;
+    } catch {
+      return '—';
+    }
+  };
+
+  const formatId = (id) => {
+    if (!id) return '—';
+    const s = String(id);
+    return s.length > 10 ? `${s.slice(0, 6)}…` : s;
   };
 
   return (
     <div
       className={`
-        relative p-4 rounded-lg border cursor-pointer
+        relative p-3 rounded-xl border cursor-pointer min-w-0 overflow-hidden
         transition-all duration-200 hover:shadow-md
         ${isSelected 
           ? 'bg-primary-50 border-primary-300 shadow-sm' 
@@ -70,27 +81,34 @@ const ClientCard = ({
       }}
     >
       {/* Status Indicator */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2">
-          <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-            <span className="text-primary font-semibold text-sm">
-              {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </span>
+      <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="relative shrink-0">
+            <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center">
+              <span className="text-primary font-semibold text-xs">
+                {(client.name || '?').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+              </span>
+            </div>
+            {client.unreadMessages > 0 && (
+              <div 
+                className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-full bg-error text-white text-xs font-semibold"
+                aria-label={`${client.unreadMessages} unread message${client.unreadMessages !== 1 ? 's' : ''}`}
+              >
+                {client.unreadMessages > 99 ? '99+' : client.unreadMessages > 9 ? '9+' : client.unreadMessages}
+              </div>
+            )}
           </div>
-          <div>
-            <h3 className="font-semibold text-text-primary text-sm">
-              {client.name}
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-text-primary text-sm truncate">
+              {client.name || '—'}
             </h3>
-            <p className="text-xs text-text-secondary">
-              ID: {client.id}
+            <p className="text-xs text-text-tertiary truncate font-mono" title={client.id}>
+              ID: {formatId(client.id)}
             </p>
           </div>
         </div>
         
-        <div className={`
-          px-2 py-1 rounded-full text-xs font-medium border
-          ${getStatusColor(client.status)}
-        `}>
+        <div className={`shrink-0 px-2 py-0.5 rounded-lg text-xs font-medium border ${getStatusColor(client.status)}`}>
           <Icon 
             name={getStatusIcon(client.status)} 
             size={12} 
@@ -101,7 +119,7 @@ const ClientCard = ({
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
+      <div className="grid grid-cols-2 gap-2 mb-2">
         <div className="text-center">
           <div className="text-lg font-bold text-text-primary">
             {client.completionRate}%
@@ -121,7 +139,7 @@ const ClientCard = ({
       </div>
 
       {/* Progress Bar */}
-      <div className="mb-3">
+      <div className="mb-2">
         <div className="flex justify-between text-xs text-text-secondary mb-1">
           <span>Progress</span>
           <span>{client.completionRate}%</span>
@@ -151,12 +169,6 @@ const ClientCard = ({
         </div>
       </div>
 
-      {/* Unread Messages Indicator */}
-      {client.unreadMessages > 0 && (
-        <div className="absolute -top-2 -right-2 bg-error text-error-foreground text-xs rounded-full w-6 h-6 flex items-center justify-center font-medium">
-          {client.unreadMessages > 9 ? '9+' : client.unreadMessages}
-        </div>
-      )}
     </div>
   );
 };

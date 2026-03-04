@@ -40,10 +40,36 @@ exports.getMessages = async (req, res) => {
       ]
     }).sort({ createdAt: 1 });
 
+    // Mark all messages from this contact as read (where current user is receiver)
+    if (contactId) {
+      await Message.updateMany(
+        { senderId: contactId, receiverId: userId, read: false },
+        { $set: { read: true } }
+      );
+    }
+
     res.json(messages);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error fetching messages' });
+  }
+};
+
+// Mark all messages from a contact as read
+exports.markAllAsRead = async (req, res) => {
+  const userId = req.user.id;
+  const { contactId } = req.params;
+
+  try {
+    const result = await Message.updateMany(
+      { senderId: contactId, receiverId: userId, read: false },
+      { $set: { read: true } }
+    );
+
+    res.json({ message: 'Messages marked as read', count: result.modifiedCount });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error marking messages as read' });
   }
 };
 
@@ -68,5 +94,54 @@ exports.markAsRead = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error marking message as read' });
+  }
+};
+
+exports.getUnreadCount = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const count = await Message.countDocuments({
+      receiverId: userId,
+      read: false
+    });
+
+    res.json({ unreadCount: count });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching unread count' });
+  }
+};
+
+exports.getUnreadCountsByContact = async (req, res) => {
+  const userId = req.user.id;
+  const mongoose = require('mongoose');
+
+  try {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const unreadCounts = await Message.aggregate([
+      {
+        $match: {
+          receiverId: userObjectId,
+          read: false
+        }
+      },
+      {
+        $group: {
+          _id: '$senderId',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const countsMap = {};
+    unreadCounts.forEach(item => {
+      countsMap[item._id.toString()] = item.count;
+    });
+
+    res.json({ unreadByContact: countsMap });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching unread counts by contact' });
   }
 };

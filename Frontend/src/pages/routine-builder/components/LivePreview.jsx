@@ -1,8 +1,8 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
 
-const LivePreview = ({ 
-  formData, 
+const LivePreview = ({
+  formData = {},
   isVisible = true,
   accessibilitySettings = {}
 }) => {
@@ -20,7 +20,7 @@ const LivePreview = ({
     tasks = [],
     enableReminders = true,
     reminderTypes = ['visual']
-  } = formData;
+  } = formData || {};
 
   const formatTime = (timeString) => {
     if (!timeString) return '';
@@ -40,19 +40,8 @@ const LivePreview = ({
     }
   };
 
-  const getCategoryColor = () => {
-    const categoryColors = {
-      daily: '#F59E0B',
-      morning: '#10B981',
-      evening: '#8B5CF6',
-      work: '#3B82F6',
-      health: '#EF4444',
-      social: '#06B6D4',
-      personal: '#84CC16',
-      hobby: '#F97316'
-    };
-    return categoryColors[category] || color;
-  };
+  // Use the user-selected routine color for preview (from Routine Color picker)
+  const accentColor = color || '#4F46E5';
 
   return (
     <div className="bg-surface rounded-lg border border-border shadow-sm">
@@ -75,18 +64,18 @@ const LivePreview = ({
               p-4 rounded-lg border-l-4 bg-surface-secondary
               ${!accessibilitySettings.reducedMotion ? 'hover:shadow-md transition-shadow duration-200' : ''}
             `}
-            style={{ borderLeftColor: getCategoryColor() }}
+            style={{ borderLeftColor: accentColor }}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3">
                 <div 
                   className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: getCategoryColor() + '20' }}
+                  style={{ backgroundColor: accentColor + '20' }}
                 >
                   <Icon 
                     name={icon} 
                     size={20} 
-                    color={getCategoryColor()}
+                    color={accentColor}
                   />
                 </div>
                 <div>
@@ -133,7 +122,7 @@ const LivePreview = ({
             <div className="flex items-center space-x-2">
               <div 
                 className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: getCategoryColor() }}
+                style={{ backgroundColor: accentColor }}
               />
               <span className="text-sm font-medium text-text-primary">{name}</span>
               <span className="text-xs text-text-secondary">({duration}m)</span>

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import axiosClient from '../../api/axiosClient';
 
 
 // Create Notification Context
@@ -66,18 +67,22 @@ const NotificationBadgeSystem = ({ children }) => {
     localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
   }, [notificationSettings]);
 
-  // Simulate real-time notification updates
+  // Fetch real notification counts
   useEffect(() => {
-    // Mock data - in real app this would come from API/WebSocket
-    const mockNotifications = {
-      messages: 2,
-      achievements: 1,
-      routines: 0,
-      reminders: 3,
-      system: 0
-    };
-    
-    setNotifications(mockNotifications);
+    if (!localStorage.getItem('nestifynd_token')) return;
+    axiosClient.get('/api/notifications/counts')
+      .then((res) => {
+        if (res.data) {
+          setNotifications({
+            messages: res.data.messages ?? 0,
+            achievements: res.data.achievements ?? 0,
+            routines: res.data.routines ?? 0,
+            reminders: res.data.reminders ?? 0,
+            system: res.data.system ?? 0
+          });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const updateNotificationCount = useCallback((type, count) => {

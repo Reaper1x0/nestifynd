@@ -77,7 +77,7 @@ const BadgeShowcase = ({ badges, earnedBadges = [] }) => {
                 Requirements:
               </h3>
               <ul className="text-sm text-text-secondary space-y-1">
-                {badge.requirements.map((req, index) => (
+                {(badge.requirements || [badge.description]).filter(Boolean).map((req, index) => (
                   <li key={index} className="flex items-start space-x-2">
                     <Icon name="CheckCircle" size={16} className="text-success mt-0.5 flex-shrink-0" />
                     <span>{req}</span>
@@ -167,7 +167,7 @@ const BadgeShowcase = ({ badges, earnedBadges = [] }) => {
       </div>
 
       {/* Badge Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {filteredBadges.map(badge => {
           const isEarned = isBadgeEarned(badge.id);
           const progress = getBadgeProgress(badge.id);
@@ -200,10 +200,7 @@ const BadgeShowcase = ({ badges, earnedBadges = [] }) => {
               </div>
 
               {/* Badge Title */}
-              <h4 className={`
-                text-xs font-medium mb-1 line-clamp-2
-                ${isEarned ? 'text-success-700' : 'text-text-primary'}
-              `}>
+              <h4 className="text-xs font-medium mb-1 line-clamp-2 text-text-primary">
                 {badge.title}
               </h4>
 

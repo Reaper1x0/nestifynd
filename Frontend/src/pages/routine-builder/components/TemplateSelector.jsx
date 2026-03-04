@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import axiosClient from '../../../api/axiosClient';
 
 const TemplateSelector = ({ 
   onTemplateSelect, 
@@ -11,6 +12,30 @@ const TemplateSelector = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [apiTemplates, setApiTemplates] = useState([]);
+  useEffect(() => {
+    if (!isVisible) return;
+    axiosClient.get('/api/templates/templates').then((res) => {
+      const list = Array.isArray(res.data) ? res.data : [];
+      setApiTemplates(list.map((t) => {
+        const cat = (t.category || '').toLowerCase();
+        return {
+          _id: t._id,
+          id: t._id,
+          name: t.name,
+          description: t.description || '',
+          category: cat === 'other' ? 'personal' : cat,
+          duration: (t.tasks || []).reduce((s, k) => s + (k.durationMinutes || 0), 0) || 30,
+          tasks: (t.tasks || []).length,
+          difficulty: 'Easy',
+          icon: 'Layout',
+          color: '#4F46E5',
+          tags: [],
+          tasks_preview: (t.tasks || []).map((k) => k.name || k)
+        };
+      }));
+    }).catch(() => setApiTemplates([]));
+  }, [isVisible]);
 
   const templateCategories = [
     { id: 'all', name: 'All Templates', icon: 'Grid3x3' },
@@ -129,11 +154,13 @@ const TemplateSelector = ({
     }
   ];
 
-  const filteredTemplates = routineTemplates.filter(template => {
+  const allTemplates = apiTemplates.length > 0 ? apiTemplates : routineTemplates;
+  const filteredTemplates = allTemplates.filter(template => {
     const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
+    const tags = template.tags || [];
     const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         template.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+                         (template.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
@@ -154,10 +181,10 @@ const TemplateSelector = ({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 z-200 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-200 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto">
       <div 
         className={`
-          bg-surface rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden
+          bg-surface rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col
           ${!accessibilitySettings.reducedMotion ? 'animate-scale-in' : ''}
         `}
         role="dialog"
@@ -165,7 +192,7 @@ const TemplateSelector = ({
         aria-modal="true"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
+        <div className="flex shrink-0 items-center justify-between p-6 border-b border-border">
           <div>
             <h2 id="template-selector-title" className="text-xl font-semibold text-text-primary">
               Choose a Template
@@ -183,7 +210,7 @@ const TemplateSelector = ({
         </div>
 
         {/* Search and Filters */}
-        <div className="p-6 border-b border-border">
+        <div className="shrink-0 p-6 border-b border-border">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <Input
@@ -219,8 +246,8 @@ const TemplateSelector = ({
           </div>
         </div>
 
-        {/* Templates Grid */}
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+        {/* Templates Grid - flex-1 min-h-0 so it scrolls and footer stays visible */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-6 pb-4">
           {filteredTemplates.length === 0 ? (
             <div className="text-center py-12">
               <Icon name="Search" size={48} className="mx-auto mb-4 text-text-tertiary" />
@@ -307,8 +334,8 @@ const TemplateSelector = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t border-border bg-surface-secondary">
+        {/* Footer - always visible at bottom */}
+        <div className="shrink-0 p-4 sm:p-6 border-t border-border bg-surface-secondary">
           <div className="flex items-center justify-between">
             <p className="text-sm text-text-secondary">
               {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''} available

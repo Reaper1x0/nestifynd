@@ -101,16 +101,18 @@ const AchievementCard = ({
             </div>
 
             {/* Difficulty Badge */}
-            <span 
-              className={`
-                px-2 py-1 rounded-full text-xs font-medium
-                ${achievement.difficulty === 'easy' ?'bg-success-100 text-success-700' 
-                  : achievement.difficulty === 'medium' ?'bg-warning-100 text-warning-700' :'bg-error-100 text-error-700'
-                }
-              `}
-            >
-              {achievement.difficulty}
-            </span>
+            {achievement.difficulty && (
+              <span 
+                className={`
+                  px-2 py-1 rounded-full text-xs font-medium text-text-primary
+                  ${achievement.difficulty === 'easy' ? 'bg-success-200' 
+                    : achievement.difficulty === 'medium' ? 'bg-warning-200' : 'bg-error-200'
+                  }
+                `}
+              >
+                {achievement.difficulty}
+              </span>
+            )}
           </div>
         </div>
       </div>

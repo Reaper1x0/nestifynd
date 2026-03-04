@@ -1,112 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
+import axiosClient from '../../../api/axiosClient';
+
+const typeToDisplay = (type) => {
+  switch (type) {
+    case 'task_completed':
+      return { icon: 'Check', color: 'text-primary', bgColor: 'bg-primary-50', borderColor: 'border-primary-200', label: 'Task Completed' };
+    case 'task_snoozed':
+      return { icon: 'Clock', color: 'text-warning', bgColor: 'bg-warning-50', borderColor: 'border-warning-200', label: 'Task Snoozed' };
+    case 'task_dismissed':
+      return { icon: 'XCircle', color: 'text-text-tertiary', bgColor: 'bg-surface-tertiary', borderColor: 'border-border-secondary', label: 'Task Dismissed' };
+    case 'reminder_sent':
+      return { icon: 'Bell', color: 'text-primary', bgColor: 'bg-primary-50', borderColor: 'border-primary-200', label: 'Reminder' };
+    case 'routine_activated':
+      return { icon: 'Play', color: 'text-success', bgColor: 'bg-success-50', borderColor: 'border-success-200', label: 'Routine Activated' };
+    case 'routine_deactivated':
+      return { icon: 'Pause', color: 'text-text-secondary', bgColor: 'bg-surface-secondary', borderColor: 'border-border', label: 'Routine Paused' };
+    case 'user_login':
+    case 'user_logout':
+      return { icon: 'User', color: 'text-text-secondary', bgColor: 'bg-surface-secondary', borderColor: 'border-border', label: 'Session' };
+    default:
+      return { icon: 'Activity', color: 'text-primary', bgColor: 'bg-primary-50', borderColor: 'border-primary-200', label: 'Activity' };
+  }
+};
+
+const formatTimeAgo = (dateStr) => {
+  const timestamp = new Date(dateStr).getTime();
+  const now = Date.now();
+  const diffInSeconds = Math.floor((now - timestamp) / 1000);
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  }
+  if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  }
+  const days = Math.floor(diffInSeconds / 86400);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+};
 
 const RecentActivity = () => {
-  const [activities] = useState([
-    {
-      id: 1,
-      type: 'routine_completed',
-      title: 'Morning Routine completed',
-      description: 'All 4 tasks finished successfully',
-      timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
-      icon: 'CheckCircle',
-      color: 'text-success',
-      bgColor: 'bg-success-50',
-      borderColor: 'border-success-200'
-    },
-    {
-      id: 2,
-      type: 'achievement_earned',
-      title: 'Achievement unlocked: Early Bird',
-      description: 'Completed morning routine before 8 AM for 7 days',
-      timestamp: new Date(Date.now() - 3600000), // 1 hour ago
-      icon: 'Award',
-      color: 'text-warning',
-      bgColor: 'bg-warning-50',
-      borderColor: 'border-warning-200'
-    },
-    {
-      id: 3,
-      type: 'task_completed',
-      title: 'Task completed: Take medication',
-      description: 'Part of Morning Routine',
-      timestamp: new Date(Date.now() - 5400000), // 1.5 hours ago
-      icon: 'Check',
-      color: 'text-primary',
-      bgColor: 'bg-primary-50',
-      borderColor: 'border-primary-200'
-    },
-    {
-      id: 4,
-      type: 'routine_snoozed',
-      title: 'Work Focus Session snoozed',
-      description: 'Rescheduled for 2:00 PM',
-      timestamp: new Date(Date.now() - 7200000), // 2 hours ago
-      icon: 'Clock',
-      color: 'text-warning',
-      bgColor: 'bg-warning-50',
-      borderColor: 'border-warning-200'
-    },
-    {
-      id: 5,
-      type: 'streak_milestone',
-      title: 'Streak milestone reached',
-      description: '12-day consistency streak achieved',
-      timestamp: new Date(Date.now() - 86400000), // 1 day ago
-      icon: 'Zap',
-      color: 'text-secondary',
-      bgColor: 'bg-secondary-50',
-      borderColor: 'border-secondary-200'
-    },
-    {
-      id: 6,
-      type: 'routine_created',
-      title: 'New routine created: Evening Wind Down',
-      description: 'Added 4 tasks for better sleep preparation',
-      timestamp: new Date(Date.now() - 172800000), // 2 days ago
-      icon: 'Plus',
-      color: 'text-primary',
-      bgColor: 'bg-primary-50',
-      borderColor: 'border-primary-200'
-    }
-  ]);
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const formatTimeAgo = (timestamp) => {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - timestamp) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return 'Just now';
-    } else if (diffInSeconds < 3600) {
-      const minutes = Math.floor(diffInSeconds / 60);
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    } else if (diffInSeconds < 86400) {
-      const hours = Math.floor(diffInSeconds / 3600);
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    } else {
-      const days = Math.floor(diffInSeconds / 86400);
-      return `${days} day${days > 1 ? 's' : ''} ago`;
-    }
-  };
+  useEffect(() => {
+    axiosClient.get('/api/activities?limit=20')
+      .then((res) => {
+        setActivities(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch(() => setActivities([]))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const getActivityTypeLabel = (type) => {
-    switch (type) {
-      case 'routine_completed':
-        return 'Routine Completed';
-      case 'achievement_earned':
-        return 'Achievement Earned';
-      case 'task_completed':
-        return 'Task Completed';
-      case 'routine_snoozed':
-        return 'Routine Snoozed';
-      case 'streak_milestone':
-        return 'Streak Milestone';
-      case 'routine_created':
-        return 'Routine Created';
-      default:
-        return 'Activity';
-    }
-  };
+  if (loading) {
+    return (
+      <div className="bg-surface rounded-xl p-6 shadow-sm border border-border mb-6">
+        <h2 className="text-xl font-semibold text-text-primary flex items-center mb-6">
+          <Icon name="Activity" size={24} className="mr-2 text-primary" />
+          Recent Activity
+        </h2>
+        <div className="flex items-center justify-center py-12">
+          <span className="text-text-secondary">Loading activity...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface rounded-xl p-6 shadow-sm border border-border mb-6">
@@ -115,7 +75,7 @@ const RecentActivity = () => {
           <Icon name="Activity" size={24} className="mr-2 text-primary" />
           Recent Activity
         </h2>
-        <button 
+        <button
           className="text-text-secondary hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded"
           aria-label="View all activities"
         >
@@ -124,55 +84,35 @@ const RecentActivity = () => {
       </div>
 
       <div className="space-y-4 max-h-96 overflow-y-auto">
-        {activities.map((activity) => (
-          <div
-            key={activity.id}
-            className={`flex items-start space-x-4 p-4 rounded-lg border ${activity.bgColor} ${activity.borderColor} hover:shadow-sm transition-shadow`}
-          >
-            <div className={`flex-shrink-0 w-10 h-10 rounded-full bg-surface flex items-center justify-center border ${activity.borderColor}`}>
-              <Icon 
-                name={activity.icon} 
-                size={20} 
-                className={activity.color}
-              />
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-medium text-text-primary truncate">
-                  {activity.title}
-                </h3>
-                <span className="text-xs text-text-tertiary whitespace-nowrap ml-2">
-                  {formatTimeAgo(activity.timestamp)}
+        {activities.map((activity) => {
+          const display = typeToDisplay(activity.type || 'other');
+          const title = activity.action || 'Activity';
+          const description = activity.details || (activity.relatedRoutine?.title ? `Part of ${activity.relatedRoutine.title}` : '');
+          return (
+            <div
+              key={activity._id}
+              className={`flex items-start space-x-4 p-4 rounded-lg border ${display.bgColor} ${display.borderColor} hover:shadow-sm transition-shadow`}
+            >
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full bg-surface flex items-center justify-center border ${display.borderColor}`}>
+                <Icon name={display.icon} size={20} className={display.color} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-sm font-medium text-text-primary truncate">{title}</h3>
+                  <span className="text-xs text-text-tertiary whitespace-nowrap ml-2">
+                    {formatTimeAgo(activity.createdAt)}
+                  </span>
+                </div>
+                {description && (
+                  <p className="text-sm text-text-secondary mb-2">{description}</p>
+                )}
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${display.color} ${display.bgColor} border ${display.borderColor}`}>
+                  {display.label}
                 </span>
               </div>
-              
-              <p className="text-sm text-text-secondary mb-2">
-                {activity.description}
-              </p>
-              
-              <div className="flex items-center justify-between">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${activity.color} ${activity.bgColor} border ${activity.borderColor}`}>
-                  {getActivityTypeLabel(activity.type)}
-                </span>
-                
-                {activity.type === 'achievement_earned' && (
-                  <div className="flex items-center space-x-1">
-                    <Icon name="Star" size={14} className="text-warning" />
-                    <span className="text-xs text-warning font-medium">+50 XP</span>
-                  </div>
-                )}
-                
-                {activity.type === 'routine_completed' && (
-                  <div className="flex items-center space-x-1">
-                    <Icon name="Zap" size={14} className="text-success" />
-                    <span className="text-xs text-success font-medium">Streak +1</span>
-                  </div>
-                )}
-              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {activities.length === 0 && (
@@ -180,28 +120,34 @@ const RecentActivity = () => {
           <Icon name="Activity" size={48} className="mx-auto text-text-tertiary mb-4" />
           <p className="text-text-secondary mb-4">No recent activity to show</p>
           <p className="text-sm text-text-tertiary">
-            Complete some routines to see your activity here
+            Complete routines and tasks to see your activity here
           </p>
         </div>
       )}
 
-      {/* Activity Summary */}
-      <div className="mt-6 pt-4 border-t border-border">
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div className="text-lg font-semibold text-text-primary">12</div>
-            <div className="text-xs text-text-secondary">Today's Actions</div>
-          </div>
-          <div>
-            <div className="text-lg font-semibold text-text-primary">89%</div>
-            <div className="text-xs text-text-secondary">Success Rate</div>
-          </div>
-          <div>
-            <div className="text-lg font-semibold text-text-primary">3</div>
-            <div className="text-xs text-text-secondary">Achievements</div>
+      {/* Summary: optional, can be driven by API later */}
+      {activities.length > 0 && (
+        <div className="mt-6 pt-4 border-t border-border">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-lg font-semibold text-text-primary">{activities.length}</div>
+              <div className="text-xs text-text-secondary">Recent items</div>
+            </div>
+            <div>
+              <div className="text-lg font-semibold text-text-primary">
+                {activities.filter((a) => a.type === 'task_completed' || a.type === 'routine_activated').length}
+              </div>
+              <div className="text-xs text-text-secondary">Completions</div>
+            </div>
+            <div>
+              <div className="text-lg font-semibold text-text-primary">
+                {new Set(activities.map((a) => a.type)).size}
+              </div>
+              <div className="text-xs text-text-secondary">Activity types</div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

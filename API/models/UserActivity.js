@@ -52,14 +52,17 @@ userActivitySchema.index({ type: 1, createdAt: -1 });
 userActivitySchema.index({ relatedTask: 1 });
 userActivitySchema.index({ relatedRoutine: 1 });
 
-// Static method to log activity
+// Static method to log activity (metadata can include routineId, taskId for relatedRoutine/relatedTask)
 userActivitySchema.statics.logActivity = function(userId, action, details, type = 'other', metadata = {}) {
+  const { routineId, taskId, ...restMeta } = metadata;
   return this.create({
     user: userId,
     action,
     details,
     type,
-    metadata
+    relatedRoutine: routineId || null,
+    relatedTask: taskId || null,
+    metadata: restMeta
   });
 };
 

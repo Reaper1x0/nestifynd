@@ -8,87 +8,97 @@ module.exports = {
     extend: {
       colors: {
         // Primary Colors
-        'primary': '#4F46E5', // indigo-600
-        'primary-50': '#EEF2FF', // indigo-50
-        'primary-100': '#E0E7FF', // indigo-100
-        'primary-200': '#C7D2FE', // indigo-200
-        'primary-300': '#A5B4FC', // indigo-300
-        'primary-400': '#818CF8', // indigo-400
-        'primary-500': '#6366F1', // indigo-500
-        'primary-600': '#4F46E5', // indigo-600
-        'primary-700': '#4338CA', // indigo-700
-        'primary-800': '#3730A3', // indigo-800
-        'primary-900': '#312E81', // indigo-900
-        'primary-foreground': '#FFFFFF', // white
+        'primary': 'var(--color-primary)',
+        'primary-50': 'var(--color-primary-50)',
+        'primary-100': 'var(--color-primary-100)',
+        'primary-200': 'var(--color-primary-200)',
+        'primary-300': '#A5B4FC',
+        'primary-400': '#818CF8',
+        'primary-500': '#6366F1',
+        'primary-600': 'var(--color-primary-600)',
+        'primary-700': 'var(--color-primary-700)',
+        'primary-800': 'var(--color-primary-800)',
+        'primary-900': 'var(--color-primary-900)',
+        'primary-foreground': 'var(--color-primary-foreground)',
 
         // Secondary Colors
-        'secondary': '#7C3AED', // violet-600
-        'secondary-50': '#F5F3FF', // violet-50
-        'secondary-100': '#EDE9FE', // violet-100
-        'secondary-200': '#DDD6FE', // violet-200
-        'secondary-300': '#C4B5FD', // violet-300
-        'secondary-400': '#A78BFA', // violet-400
-        'secondary-500': '#8B5CF6', // violet-500
-        'secondary-600': '#7C3AED', // violet-600
-        'secondary-700': '#6D28D9', // violet-700
-        'secondary-800': '#5B21B6', // violet-800
-        'secondary-900': '#4C1D95', // violet-900
-        'secondary-foreground': '#FFFFFF', // white
+        'secondary': 'var(--color-secondary)',
+        'secondary-50': 'var(--color-secondary-50)',
+        'secondary-100': 'var(--color-secondary-100)',
+        'secondary-200': 'var(--color-secondary-200)',
+        'secondary-300': '#C4B5FD',
+        'secondary-400': '#A78BFA',
+        'secondary-500': '#8B5CF6',
+        'secondary-600': 'var(--color-secondary-600)',
+        'secondary-700': 'var(--color-secondary-700)',
+        'secondary-800': 'var(--color-secondary-800)',
+        'secondary-900': 'var(--color-secondary-900)',
+        'secondary-foreground': 'var(--color-secondary-foreground)',
 
         // Accent Colors
-        'accent': '#10B981', // emerald-500
-        'accent-50': '#ECFDF5', // emerald-50
-        'accent-100': '#D1FAE5', // emerald-100
-        'accent-200': '#A7F3D0', // emerald-200
-        'accent-300': '#6EE7B7', // emerald-300
-        'accent-400': '#34D399', // emerald-400
-        'accent-500': '#10B981', // emerald-500
-        'accent-600': '#059669', // emerald-600
-        'accent-700': '#047857', // emerald-700
-        'accent-800': '#065F46', // emerald-800
-        'accent-900': '#064E3B', // emerald-900
-        'accent-foreground': '#FFFFFF', // white
+        'accent': 'var(--color-accent)',
+        'accent-50': 'var(--color-accent-50)',
+        'accent-100': 'var(--color-accent-100)',
+        'accent-200': 'var(--color-accent-200)',
+        'accent-300': '#6EE7B7',
+        'accent-400': '#34D399',
+        'accent-500': 'var(--color-accent-500)',
+        'accent-600': 'var(--color-accent-600)',
+        'accent-700': 'var(--color-accent-700)',
+        'accent-800': 'var(--color-accent-800)',
+        'accent-900': 'var(--color-accent-900)',
+        'accent-foreground': 'var(--color-accent-foreground)',
 
         // Background Colors
-        'background': '#FAFAFA', // gray-50
-        'surface': '#FFFFFF', // white
-        'surface-secondary': '#F9FAFB', // gray-50
-        'surface-tertiary': '#F3F4F6', // gray-100
+        'background': 'var(--color-background)',
+        'surface': 'var(--color-surface)',
+        'surface-secondary': 'var(--color-surface-secondary)',
+        'surface-tertiary': 'var(--color-surface-tertiary)',
 
         // Text Colors
-        'text-primary': '#1F2937', // gray-800
-        'text-secondary': '#6B7280', // gray-500
-        'text-tertiary': '#9CA3AF', // gray-400
-        'text-inverse': '#FFFFFF', // white
+        'text-primary': 'var(--color-text-primary)',
+        'text-secondary': 'var(--color-text-secondary)',
+        'text-tertiary': 'var(--color-text-tertiary)',
+        'text-inverse': 'var(--color-text-inverse)',
 
         // Status Colors
-        'success': '#059669', // emerald-600
-        'success-50': '#ECFDF5', // emerald-50
-        'success-100': '#D1FAE5', // emerald-100
-        'success-200': '#A7F3D0', // emerald-200
-        'success-foreground': '#FFFFFF', // white
+        'success': 'var(--color-success)',
+        'success-50': 'var(--color-success-50)',
+        'success-100': 'var(--color-success-100)',
+        'success-200': 'var(--color-success-200)',
+        'success-600': 'var(--color-success-600)',
+        'success-700': 'var(--color-success-700)',
+        'success-800': 'var(--color-success-800)',
+        'success-foreground': 'var(--color-success-foreground)',
 
-        'warning': '#D97706', // amber-600
-        'warning-50': '#FFFBEB', // amber-50
-        'warning-100': '#FEF3C7', // amber-100
-        'warning-200': '#FDE68A', // amber-200
-        'warning-foreground': '#FFFFFF', // white
+        'warning': 'var(--color-warning)',
+        'warning-50': 'var(--color-warning-50)',
+        'warning-100': 'var(--color-warning-100)',
+        'warning-200': 'var(--color-warning-200)',
+        'warning-600': 'var(--color-warning-600)',
+        'warning-700': 'var(--color-warning-700)',
+        'warning-800': 'var(--color-warning-800)',
+        'warning-foreground': 'var(--color-warning-foreground)',
 
-        'error': '#DC2626', // red-600
-        'error-50': '#FEF2F2', // red-50
-        'error-100': '#FEE2E2', // red-100
-        'error-200': '#FECACA', // red-200
-        'error-foreground': '#FFFFFF', // white
+        'error': 'var(--color-error)',
+        'error-50': 'var(--color-error-50)',
+        'error-100': 'var(--color-error-100)',
+        'error-200': 'var(--color-error-200)',
+        'error-300': 'var(--color-error-300)',
+        'error-600': 'var(--color-error-600)',
+        'error-700': 'var(--color-error-700)',
+        'error-800': 'var(--color-error-800)',
+        'error-foreground': 'var(--color-error-foreground)',
 
         // Border Colors
-        'border': '#E5E7EB', // gray-200
-        'border-secondary': '#D1D5DB', // gray-300
-        'border-focus': '#4F46E5', // indigo-600
-        'input': '#E5E7EB', // same as border
-        'ring': '#4F46E5', // primary
-        'foreground': '#1F2937', // same as text-primary
-        'muted-foreground': '#6B7280', // same as text-secondary
-        'onBackground': '#1F2937', // same as text-primary
+        'border': 'var(--color-border)',
+        'border-secondary': 'var(--color-border-secondary)',
+        'border-focus': 'var(--color-border-focus)',
+        'input': 'var(--color-border)',
+        'ring': 'var(--color-primary)',
+        'foreground': 'var(--color-text-primary)',
+        'muted-foreground': 'var(--color-text-secondary)',
+        'onBackground': 'var(--color-text-primary)',
       },
       fontFamily: {
         'sans': ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],

@@ -1,12 +1,18 @@
 const express = require('express');
+const cors = require('cors');
 const connectDB = require('./config/db');
 const dotenv = require('dotenv');
 const { swaggerUi, specs } = require('./config/swagger');
+
+dotenv.config();
 
 // Import seeding functions
 const seedRoles = require('./seed/roles');
 const seedPlans = require('./seed/plans');
 const seedUiModes = require('./seed/uiModes');
+const seedRoutineTemplates = require('./seed/routineTemplates');
+const seedBadges = require('./seed/badges');
+const seedChallenges = require('./seed/challenges');
 
 // Import all routes
 const authRoutes = require('./routes/authRoutes');
@@ -15,6 +21,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const calendarRoutes = require('./routes/calendarRoute');
 const chatlogRoutes = require('./routes/chatlogRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 const discountRoutes = require('./routes/discountRoutes');
 const gamificationRoutes = require('./routes/gamificationRoute');
 const messageRoutes = require('./routes/messageRoute');
@@ -32,9 +39,31 @@ const therapistRoutes = require('./routes/therapistRoute');
 const uiModeRoutes = require('./routes/uiModeRoutes');
 const userAssignmentRoutes = require('./routes/userAssignmentRoutes');
 
-dotenv.config();
 const app = express();
 connectDB();
+
+// CORS: allow frontend origin(s)
+const allowedOrigins = [
+  'http://localhost:4028',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:4028',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000'
+];
+if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Seed database with initial data
 const seedDatabase = async () => {
@@ -42,6 +71,9 @@ const seedDatabase = async () => {
     await seedRoles();
     await seedPlans();
     await seedUiModes();
+    await seedRoutineTemplates();
+    await seedBadges();
+    await seedChallenges();
     console.log('Database seeding completed');
   } catch (error) {
     console.error('Database seeding failed:', error);
@@ -67,6 +99,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/chatlogs', chatlogRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/discounts', discountRoutes);
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/messages', messageRoutes);

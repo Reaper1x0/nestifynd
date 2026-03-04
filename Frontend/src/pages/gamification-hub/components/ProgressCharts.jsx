@@ -8,7 +8,9 @@ const ProgressCharts = ({
   weeklyData = [], 
   monthlyData = [], 
   categoryData = [],
-  streakData = []
+  streakData = [],
+  currentStreak = 0,
+  totalPoints = 0
 }) => {
   const { getNavigationClasses, effectiveSettings } = useAccessibility();
   const [selectedChart, setSelectedChart] = useState('weekly');
@@ -122,26 +124,32 @@ const ProgressCharts = ({
   );
 
   const CategoryChart = () => (
-    <div className="h-64" role="img" aria-label="Task categories pie chart">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={categoryData}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-            outerRadius={80}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {categoryData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-            ))}
-          </Pie>
-          <Tooltip content={<CustomTooltip />} />
-        </PieChart>
-      </ResponsiveContainer>
+    <div className="h-64 flex items-center justify-center" role="img" aria-label="Task categories pie chart">
+      {categoryData.length > 0 ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={categoryData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {categoryData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+      ) : (
+        <p className="text-text-secondary text-sm text-center px-4">
+          Complete tasks from your routines to see a breakdown by routine category.
+        </p>
+      )}
     </div>
   );
 
@@ -246,7 +254,7 @@ const ProgressCharts = ({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border">
         <div className="text-center">
           <div className="text-2xl font-bold text-text-primary mb-1">
-            {selectedChart === 'weekly' ? weeklyData.reduce((sum, day) => sum + day.completed, 0) : '42'}
+            {selectedChart === 'weekly' ? weeklyData.reduce((sum, day) => sum + (day.completed || 0), 0) : currentStreak}
           </div>
           <div className="text-xs text-text-secondary">
             {selectedChart === 'weekly' ? 'Tasks Completed' : 'Current Streak'}
@@ -254,7 +262,9 @@ const ProgressCharts = ({
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-text-primary mb-1">
-            {selectedChart === 'weekly' ? Math.round((weeklyData.reduce((sum, day) => sum + day.completed, 0) / weeklyData.reduce((sum, day) => sum + day.total, 0)) * 100) : '87'}%
+            {selectedChart === 'weekly' && weeklyData.length > 0
+              ? Math.round((weeklyData.reduce((sum, day) => sum + (day.completed || 0), 0) / Math.max(1, weeklyData.reduce((sum, day) => sum + (day.total || 1), 0))) * 100)
+              : selectedChart === 'streak' && currentStreak > 0 ? Math.min(100, currentStreak * 10) : 0}%
           </div>
           <div className="text-xs text-text-secondary">
             {selectedChart === 'weekly' ? 'Completion Rate' : 'Success Rate'}
@@ -262,7 +272,7 @@ const ProgressCharts = ({
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-text-primary mb-1">
-            {selectedChart === 'categories' ? categoryData.length : '156'}
+            {selectedChart === 'categories' ? categoryData.length : totalPoints}
           </div>
           <div className="text-xs text-text-secondary">
             {selectedChart === 'categories' ? 'Categories' : 'Total Points'}
@@ -270,7 +280,7 @@ const ProgressCharts = ({
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-text-primary mb-1">
-            7
+            {selectedChart === 'weekly' ? weeklyData.filter(d => (d.completed || 0) > 0).length : selectedChart === 'streak' ? streakData.length : currentStreak}
           </div>
           <div className="text-xs text-text-secondary">
             Days Active

@@ -1,10 +1,9 @@
-
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 dotenv.config();
 
 const User = require('../models/User');
-const Activity = require('../models/Activity');
+const UserActivity = require('../models/UserActivity');
 const Task = require('../models/Task');
 const { sendEmail } = require('../utils/emailService');
 
@@ -16,16 +15,16 @@ async function sendWeeklyReports() {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
     for (const user of users) {
-      const activities = await Activity.find({
-        userId: user._id,
+      const activities = await UserActivity.find({
+        user: user._id,
         createdAt: { $gte: oneWeekAgo }
       });
 
-      const snoozes = activities.filter(a => a.action.startsWith('Snoozed')).length;
-      const dismissals = activities.filter(a => a.action.startsWith('Dismissed')).length;
-      const reminders = activities.filter(a => a.action.startsWith('Reminder sent')).length;
-      const completed = await Task.countDocuments({ userId: user._id, completed: true });
-      const pending = await Task.countDocuments({ userId: user._id, completed: false });
+      const snoozes = activities.filter(a => a.type === 'task_snoozed').length;
+      const dismissals = activities.filter(a => a.type === 'task_dismissed').length;
+      const reminders = activities.filter(a => a.type === 'reminder_sent').length;
+      const completed = await Task.countDocuments({ user: user._id, completed: true });
+      const pending = await Task.countDocuments({ user: user._id, completed: false });
 
       const body = `
 Hello ${user.email},

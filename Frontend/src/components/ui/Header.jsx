@@ -4,6 +4,7 @@ import Icon from '../AppIcon';
 import Button from './Button';
 import { useRole } from './RoleBasedRouter';
 import { useAuth } from '../../contexts/AuthContext';
+import axiosClient from '../../api/axiosClient';
 
 const Header = () => {
   const location = useLocation();
@@ -11,10 +12,30 @@ const Header = () => {
   const { userRole } = useRole();
   const { user, logout } = useAuth();
   const [notifications, setNotifications] = useState({
-    messages: 2,
-    achievements: 1,
+    messages: 0,
+    achievements: 0,
     routines: 0
   });
+
+  const fetchNotificationCounts = () => {
+    if (!user) return;
+    axiosClient.get('/api/notifications/counts').then((res) => {
+      if (res.data) {
+        setNotifications({
+          messages: res.data.messages ?? 0,
+          achievements: res.data.achievements ?? 0,
+          routines: res.data.routines ?? 0
+        });
+      }
+    }).catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchNotificationCounts();
+    // Refresh counts every 30 seconds
+    const interval = setInterval(fetchNotificationCounts, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [accessibilitySettings, setAccessibilitySettings] = useState({
     reducedMotion: false,
@@ -44,8 +65,22 @@ const Header = () => {
     },
     {
       label: 'Routines',
-      path: '/routine-builder',
+      path: '/routines',
       icon: 'Calendar',
+      badge: 0,
+      roleRequired: 'user'
+    },
+    {
+      label: 'AI Routine',
+      path: '/ai-routine',
+      icon: 'Sparkles',
+      badge: 0,
+      roleRequired: 'user'
+    },
+    {
+      label: 'AI Assistant',
+      path: '/ai-chat',
+      icon: 'Bot',
       badge: 0,
       roleRequired: 'user'
     },
@@ -58,7 +93,7 @@ const Header = () => {
     },
     {
       label: 'Messages',
-      path: '#',
+      path: '/messages',
       icon: 'MessageCircle',
       badge: notifications.messages,
       roleRequired: 'user'
@@ -76,6 +111,55 @@ const Header = () => {
       icon: 'Activity',
       badge: 0,
       roleRequired: 'therapist'
+    },
+    {
+      label: 'Messages',
+      path: '/messages',
+      icon: 'MessageCircle',
+      badge: notifications.messages,
+      roleRequired: 'therapist'
+    },
+    {
+      label: 'Settings',
+      path: '/settings-accessibility',
+      icon: 'Settings',
+      badge: 0,
+      roleRequired: 'therapist'
+    },
+    {
+      label: 'Dashboard',
+      path: '/caregiver-dashboard',
+      icon: 'Heart',
+      badge: 0,
+      roleRequired: 'caregiver'
+    },
+    {
+      label: 'Messages',
+      path: '/messages',
+      icon: 'MessageCircle',
+      badge: notifications.messages,
+      roleRequired: 'caregiver'
+    },
+    {
+      label: 'Settings',
+      path: '/settings-accessibility',
+      icon: 'Settings',
+      badge: 0,
+      roleRequired: 'caregiver'
+    },
+    {
+      label: 'Admin Dashboard',
+      path: '/admin-dashboard',
+      icon: 'Shield',
+      badge: 0,
+      roleRequired: 'admin'
+    },
+    {
+      label: 'Settings',
+      path: '/settings-accessibility',
+      icon: 'Settings',
+      badge: 0,
+      roleRequired: 'admin'
     }
   ];
 
@@ -107,7 +191,12 @@ const Header = () => {
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => navigate(userRole === 'therapist' ? '/therapist-dashboard' : '/home-dashboard')}
+              onClick={() => navigate(
+                userRole === 'admin' ? '/admin-dashboard'
+                : userRole === 'therapist' ? '/therapist-dashboard' 
+                : userRole === 'caregiver' ? '/caregiver-dashboard' 
+                : '/home-dashboard'
+              )}
               className="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-primary rounded-lg p-1"
               aria-label="NestifyND Home"
             >
@@ -150,13 +239,13 @@ const Header = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1" role="navigation">
+          <nav className="hidden md:flex items-center gap-3" role="navigation">
             {filteredNavItems.map((item) => (
               <button
                 key={item.path}
                 onClick={() => handleNavigation(item.path)}
                 className={`
-                  relative flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium
+                  relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
                   transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary
                   ${location.pathname === item.path
                     ? 'bg-primary-50 text-primary border border-primary-200' :'text-text-secondary hover:text-text-primary hover:bg-surface-secondary'
@@ -168,10 +257,10 @@ const Header = () => {
                 <span>{item.label}</span>
                 {item.badge > 0 && (
                   <span 
-                    className="absolute -top-1 -right-1 bg-error text-error-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center"
+                    className="absolute -top-1.5 -right-1.5 bg-error text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-semibold"
                     aria-label={`${item.badge} notifications`}
                   >
-                    {item.badge}
+                    {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 )}
               </button>

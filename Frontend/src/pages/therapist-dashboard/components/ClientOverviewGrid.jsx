@@ -7,6 +7,7 @@ const ClientOverviewGrid = ({
   clients, 
   onClientSelect, 
   selectedClient,
+  onAddClient,
   accessibilitySettings 
 }) => {
   const [sortBy, setSortBy] = useState('name');
@@ -30,8 +31,8 @@ const ClientOverviewGrid = ({
 
   const filteredAndSortedClients = clients
     .filter(client => {
-      const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           client.id.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (client.id ? String(client.id).toLowerCase() : '').includes(searchTerm.toLowerCase());
       const matchesStatus = filterStatus === 'all' || client.status === filterStatus;
       return matchesSearch && matchesStatus;
     })
@@ -77,50 +78,71 @@ const ClientOverviewGrid = ({
 
   const stats = getStatusStats();
 
+  const formatClientId = (id) => {
+    if (!id) return '—';
+    const str = String(id);
+    return str.length > 10 ? `${str.slice(0, 6)}.${str.slice(-4)}` : str;
+  };
+
+  const formatLastActivity = (date) => {
+    if (!date) return '—';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '—';
+    const now = Date.now();
+    const diffMs = now - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hr ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return d.toLocaleDateString();
+  };
+
   return (
-    <div className="bg-surface rounded-lg border border-border p-6">
+    <div className="bg-surface rounded-lg border border-border p-4 md:p-5">
       {/* Header with Stats */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 mb-3">
         <div>
-          <h2 className="text-xl font-semibold text-text-primary mb-2">
+          <h2 className="text-lg font-semibold text-text-primary mb-1">
             Client Overview
           </h2>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-success rounded-full"></div>
-              <span className="text-text-secondary">
-                Excellent: {stats.excellent}
-              </span>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+            <div className="flex items-center gap-2 min-w-[140px]">
+              <div className="w-2.5 h-2.5 bg-success rounded-full shrink-0" />
+              <span className="text-text-secondary">Excellent</span>
+              <span className="font-medium text-text-primary tabular-nums">{stats.excellent}</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-primary rounded-full"></div>
-              <span className="text-text-secondary">
-                Active: {stats.active}
-              </span>
+            <div className="flex items-center gap-2 min-w-[100px]">
+              <div className="w-2.5 h-2.5 bg-primary rounded-full shrink-0" />
+              <span className="text-text-secondary">Active</span>
+              <span className="font-medium text-text-primary tabular-nums">{stats.active}</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-warning rounded-full"></div>
-              <span className="text-text-secondary">
-                Needs Attention: {stats.needsAttention}
-              </span>
+            <div className="flex items-center gap-2 min-w-[140px]">
+              <div className="w-2.5 h-2.5 bg-warning rounded-full shrink-0" />
+              <span className="text-text-secondary">Needs Attention</span>
+              <span className="font-medium text-text-primary tabular-nums">{stats.needsAttention}</span>
             </div>
           </div>
         </div>
         
-        <div className="mt-4 lg:mt-0">
-          <Button
-            variant="primary"
-            iconName="UserPlus"
-            iconPosition="left"
-            onClick={() => {/* Add new client functionality */}}
-          >
-            Add Client
-          </Button>
-        </div>
+        {onAddClient && (
+          <div className="mt-4 lg:mt-0">
+            <Button
+              variant="primary"
+              iconName="UserPlus"
+              iconPosition="left"
+              onClick={onAddClient}
+            >
+              Add Client
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Filters and Search */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-2">
         <div className="flex-1">
           <Input
             type="search"
@@ -168,7 +190,7 @@ const ClientOverviewGrid = ({
       </div>
 
       {/* Table Header */}
-      <div className="hidden lg:grid lg:grid-cols-6 gap-4 pb-3 border-b border-border mb-4">
+      <div className="hidden lg:grid lg:grid-cols-6 gap-4 pb-2 border-b border-border mb-2">
         <button
           onClick={() => handleSort('name')}
           className="flex items-center space-x-1 text-left text-sm font-medium text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-primary rounded"
@@ -216,19 +238,19 @@ const ClientOverviewGrid = ({
       {/* Client Rows */}
       <div className="space-y-2">
         {filteredAndSortedClients.length === 0 ? (
-          <div className="text-center py-8 text-text-secondary">
-            <Icon name="Users" size={48} className="mx-auto mb-4 opacity-50" />
-            <p>No clients found matching your criteria.</p>
+          <div className="text-center py-12 text-text-secondary">
+            <Icon name="Users" size={40} className="mx-auto mb-3 opacity-40" />
+            <p className="text-sm">No clients found matching your criteria.</p>
           </div>
         ) : (
           filteredAndSortedClients.map((client) => (
             <div
               key={client.id}
               className={`
-                grid grid-cols-1 lg:grid-cols-6 gap-4 p-4 rounded-lg border cursor-pointer
-                transition-all duration-200 hover:shadow-sm
+                grid grid-cols-1 lg:grid-cols-6 gap-4 items-center p-3 rounded-lg border cursor-pointer
+                transition-all duration-200
                 ${selectedClient?.id === client.id 
-                  ? 'bg-primary-50 border-primary-300' :'bg-surface border-border hover:border-primary-200'
+                  ? 'bg-primary-50 border-primary-200' : 'bg-surface border-border hover:border-primary-200 hover:bg-primary-50/50'
                 }
                 ${accessibilitySettings.reducedMotion ? 'transition-none' : ''}
               `}
@@ -244,15 +266,15 @@ const ClientOverviewGrid = ({
               }}
             >
               {/* Client Info */}
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
                   <span className="text-primary font-semibold text-sm">
-                    {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {(client.name || '?').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                   </span>
                 </div>
-                <div>
-                  <div className="font-medium text-text-primary">{client.name}</div>
-                  <div className="text-sm text-text-secondary">ID: {client.id}</div>
+                <div className="min-w-0">
+                  <div className="font-medium text-text-primary truncate">{client.name || '—'}</div>
+                  <div className="text-xs text-text-tertiary font-mono truncate" title={client.id}>ID: {formatClientId(client.id)}</div>
                 </div>
               </div>
 
@@ -284,10 +306,15 @@ const ClientOverviewGrid = ({
               {/* Status */}
               <div className="flex items-center">
                 <span className={`
-                  px-2 py-1 rounded-full text-xs font-medium border
-                  ${client.status === 'excellent' ? 'text-success bg-success-50 border-success-200' :
-                    client.status === 'needs-attention'? 'text-warning bg-warning-50 border-warning-200' : 'text-primary bg-primary-50 border-primary-200'}
+                  inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium
+                  ${client.status === 'excellent' ? 'text-success-700 bg-success-50' :
+                    client.status === 'needs-attention' ? 'text-warning-700 bg-warning-50' :
+                    'text-primary-700 bg-primary-50'}
                 `}>
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    client.status === 'excellent' ? 'bg-success' :
+                    client.status === 'needs-attention' ? 'bg-warning' : 'bg-primary'
+                  }`} />
                   {client.status.replace('-', ' ')}
                 </span>
               </div>
@@ -306,7 +333,7 @@ const ClientOverviewGrid = ({
               {/* Last Activity */}
               <div className="flex items-center text-sm text-text-secondary">
                 <span className="lg:hidden mr-2">Last activity:</span>
-                {new Date(client.lastActivity).toLocaleDateString()}
+                {formatLastActivity(client.lastActivity)}
               </div>
             </div>
           ))

@@ -47,6 +47,7 @@ const authMiddleware = require('../middlewares/auth');
  *       500:
  *         description: Server error
  */
+router.get('/chat/history', authMiddleware, aiController.getChatHistory);
 router.post('/chat', authMiddleware, aiController.chatWithAI);
 
 /**
@@ -101,6 +102,7 @@ router.post('/chat', authMiddleware, aiController.chatWithAI);
  *         description: Server error
  */
 router.post('/suggest-routine', authMiddleware, aiController.suggestRoutine);
+router.post('/generate-routine-from-qa', authMiddleware, aiController.generateRoutineFromQa);
 
 /**
  * @swagger

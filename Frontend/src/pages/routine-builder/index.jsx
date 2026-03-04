@@ -4,6 +4,7 @@ import Header from '../../components/ui/Header';
 import TabNavigation from '../../components/ui/TabNavigation';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
+import axiosClient from '../../api/axiosClient';
 
 // Import all components
 import RoutineBasicInfo from './components/RoutineBasicInfo';
@@ -31,6 +32,7 @@ const RoutineBuilder = () => {
     name: '',
     description: '',
     category: 'daily',
+    selectedTemplateId: null, // set when user picks a template (backend template _id)
     color: '#4F46E5',
     icon: 'Calendar',
     
@@ -101,86 +103,158 @@ const RoutineBuilder = () => {
     });
   }, []);
 
+  const params = new URLSearchParams(location.search);
+  const clientId = params.get('clientId');
+  const returnPath = params.get('returnTo') || (clientId ? '/therapist-dashboard' : '/home-dashboard');
+
+  const isMongoObjectId = (id) => {
+    if (!id || typeof id !== 'string') return false;
+    return /^[a-fA-F0-9]{24}$/.test(id);
+  };
+
+  const [aiRoutineLoaded, setAiRoutineLoaded] = useState(false);
+
+  // Prefill from AI-suggested routine (e.g. from /ai-routine)
+  useEffect(() => {
+    const suggested = location.state?.suggestedRoutine;
+    if (suggested && !params.get('edit')) {
+      const tasks = Array.isArray(suggested.tasks) ? suggested.tasks : [];
+      setFormData((prev) => ({
+        ...prev,
+        name: suggested.name || prev.name,
+        description: suggested.description || prev.description,
+        time: prev.time,
+        tasks: tasks.map((t, i) => ({
+          id: t.id || `ai-${i}`,
+          name: t.name || `Task ${i + 1}`,
+          description: t.description || '',
+          estimatedTime: t.estimatedDuration ?? t.durationMinutes ?? 15,
+          isRequired: true,
+          hasVoicePrompt: false,
+          completionCriteria: 'manual',
+        })),
+        _originalTaskIds: [],
+      }));
+      // Expand all sections to show the prefilled data
+      setExpandedSections({
+        basic: true,
+        schedule: true,
+        tasks: true,
+        reminders: false
+      });
+      setAiRoutineLoaded(true);
+      // Clear after 5 seconds
+      setTimeout(() => setAiRoutineLoaded(false), 5000);
+      window.history.replaceState({}, '', location.pathname + location.search);
+    }
+  }, [location.state?.suggestedRoutine]);
+
   // Check if editing existing routine
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
     const routineId = params.get('edit');
-    
+
     if (routineId) {
-      // In a real app, load routine data from API
-      // For now, we'll simulate loading an existing routine
       setIsLoading(true);
-      setTimeout(() => {
-        // Mock existing routine data
-        const existingRoutine = {
-          name: 'Morning Routine',
-          description: 'Start the day with energy and focus',
-          category: 'morning',
-          color: '#10B981',
-          icon: 'Sunrise',
-          frequency: 'daily',
-          time: '07:00',
-          duration: 45,
-          tasks: [
-            {
-              id: '1',
-              name: 'Stretch and wake up',
-              description: 'Light stretching to activate muscles',
-              estimatedTime: 5,
+      (async () => {
+        try {
+          let r;
+          let taskList = [];
+          if (clientId) {
+            const rRes = await axiosClient.get(`/api/routines/user/${clientId}/${routineId}`);
+            r = rRes.data;
+            taskList = Array.isArray(r.tasks) ? r.tasks : [];
+          } else {
+            const [rRes, tRes] = await Promise.all([
+              axiosClient.get(`/api/routines/${routineId}`),
+              axiosClient.get(`/api/tasks?routine=${routineId}`).catch(() => ({ data: [] })),
+            ]);
+            r = rRes.data;
+            taskList = Array.isArray(tRes.data) ? tRes.data : [];
+          }
+          setFormData((prev) => ({
+            ...prev,
+            name: r.title || r.name || '',
+            description: r.description || '',
+            category: prev.category,
+            color: prev.color,
+            icon: prev.icon,
+            frequency: r.schedule?.isRecurring !== false ? 'daily' : 'daily',
+            time: r.schedule?.startTime || '09:00',
+            duration: 30,
+            daysOfWeek: r.schedule?.daysOfWeek?.length ? r.schedule.daysOfWeek : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+            tasks: taskList.map((t) => ({
+              id: t._id,
+              name: t.name,
+              description: t.description || '',
+              estimatedTime: t.estimatedDuration || 15,
               isRequired: true,
               hasVoicePrompt: false,
-              completionCriteria: 'manual'
-            },
-            {
-              id: '2',
-              name: 'Brush teeth',
-              description: 'Morning dental hygiene',
-              estimatedTime: 3,
-              isRequired: true,
-              hasVoicePrompt: false,
-              completionCriteria: 'manual'
-            }
-          ]
-        };
-        setFormData(prev => ({ ...prev, ...existingRoutine }));
-        setIsLoading(false);
-      }, 1000);
+              completionCriteria: t.completionCriteria || 'manual',
+            })),
+            _originalTaskIds: taskList.map((t) => t._id),
+            allowPartialCompletion: r.settings?.allowSnooze !== false,
+            requireAllTasks: r.settings?.allowDismiss !== false,
+          }));
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsLoading(false);
+        }
+      })();
     }
-  }, [location.search]);
+  }, [location.search, clientId]);
+
+  // Pure check only (no setState). Use for render-time completion display.
+  const isSectionValid = (sectionKey) => {
+    const data = formData || {};
+    switch (sectionKey) {
+      case 'basic':
+        return Boolean(data.name?.trim() && data.category);
+      case 'schedule':
+        return Boolean(data.frequency && data.time && (data.duration == null || data.duration >= 5));
+      case 'tasks':
+        return Array.isArray(data.tasks) && data.tasks.length > 0;
+      case 'reminders':
+        return !data.enableReminders || (Array.isArray(data.reminderTypes) && data.reminderTypes.length > 0);
+      default:
+        return false;
+    }
+  };
 
   const validateSection = (sectionKey) => {
     const newErrors = {};
+    const data = formData || {};
     
     switch (sectionKey) {
       case 'basic':
-        if (!formData.name.trim()) {
+        if (!(data.name || '').trim()) {
           newErrors.name = 'Routine name is required';
         }
-        if (!formData.category) {
+        if (!data.category) {
           newErrors.category = 'Please select a category';
         }
         break;
         
       case 'schedule':
-        if (!formData.frequency) {
+        if (!data.frequency) {
           newErrors.frequency = 'Please select a frequency';
         }
-        if (!formData.time) {
+        if (!data.time) {
           newErrors.time = 'Please set a time';
         }
-        if (!formData.duration || formData.duration < 5) {
+        if (!data.duration || data.duration < 5) {
           newErrors.duration = 'Duration must be at least 5 minutes';
         }
         break;
         
       case 'tasks':
-        if (formData.tasks.length === 0) {
+        if (!Array.isArray(data.tasks) || data.tasks.length === 0) {
           newErrors.tasks = 'Please add at least one task';
         }
         break;
         
       case 'reminders':
-        if (formData.enableReminders && formData.reminderTypes.length === 0) {
+        if (data.enableReminders && (!Array.isArray(data.reminderTypes) || data.reminderTypes.length === 0)) {
           newErrors.reminders = 'Please select at least one reminder type';
         }
         break;
@@ -217,22 +291,25 @@ const RoutineBuilder = () => {
   };
 
   const handleTemplateSelect = (template) => {
+    const tasksPreview = template.tasks_preview || (template.tasks || []).map(t => (typeof t === 'string' ? t : t.name));
+    const duration = template.duration || (template.tasks || []).reduce((sum, t) => sum + (t.durationMinutes || 0), 0) || 30;
     const templateData = {
       name: template.name,
-      description: template.description,
-      category: template.category,
-      color: template.color,
-      icon: template.icon,
-      duration: template.duration,
-      tasks: template.tasks_preview.map((taskName, index) => ({
+      description: template.description || '',
+      category: template.category || 'daily',
+      color: template.color || '#4F46E5',
+      icon: template.icon || 'Calendar',
+      duration: duration,
+      tasks: tasksPreview.map((taskName, index) => ({
         id: `template-${index}`,
-        name: taskName,
+        name: typeof taskName === 'string' ? taskName : taskName.name,
         description: '',
-        estimatedTime: Math.ceil(template.duration / template.tasks_preview.length),
+        estimatedTime: duration && tasksPreview.length ? Math.ceil(duration / tasksPreview.length) : 15,
         isRequired: true,
         hasVoicePrompt: false,
         completionCriteria: 'manual'
-      }))
+      })),
+      selectedTemplateId: template._id || null
     };
     
     setFormData(prev => ({ ...prev, ...templateData }));
@@ -273,61 +350,131 @@ const RoutineBuilder = () => {
   };
 
   const handleSave = async (isDraft = false) => {
-    // Validate all sections
     let isValid = true;
-    sectionKeys.forEach(sectionKey => {
-      if (!validateSection(sectionKey)) {
-        isValid = false;
-      }
+    sectionKeys.forEach((sectionKey) => {
+      if (!validateSection(sectionKey)) isValid = false;
     });
-
-    if (!isValid && !isDraft) {
-      return;
-    }
+    if (!isValid && !isDraft) return;
 
     setIsLoading(true);
-    
+    const params = new URLSearchParams(location.search);
+    const editId = params.get('edit');
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // In a real app, save to backend
-      console.log('Saving routine:', formData);
-      
-      // Show success message and navigate
-      navigate('/home-dashboard', { 
-        state: { 
-          message: `Routine "${formData.name}" ${isDraft ? 'saved as draft' : 'created successfully'}!`,
-          type: 'success'
+      const routinePayload = {
+        title: formData.name,
+        description: formData.description || '',
+        ...(formData.selectedTemplateId && { templateId: formData.selectedTemplateId }),
+        schedule: {
+          startTime: formData.time,
+          endTime: formData.time,
+          daysOfWeek: formData.daysOfWeek || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+          isRecurring: true,
+        },
+        settings: {
+          allowSnooze: formData.allowPartialCompletion !== false,
+          allowDismiss: formData.requireAllTasks !== false,
+          reminderInterval: 5,
+        },
+      };
+
+      let routineId;
+      const tasks = formData.tasks || [];
+
+      if (clientId) {
+        if (editId) {
+          await axiosClient.put(`/api/routines/user/${clientId}/${editId}`, routinePayload);
+          routineId = editId;
+          const currentTaskIds = tasks.filter((t) => t.id && isMongoObjectId(t.id)).map((t) => String(t.id));
+          const originalTaskIds = (formData._originalTaskIds || []).filter(isMongoObjectId).map(String);
+          const toDelete = originalTaskIds.filter((id) => !currentTaskIds.includes(id));
+          for (const taskId of toDelete) {
+            await axiosClient.delete(`/api/routines/user/${clientId}/task/${taskId}`);
+          }
+          for (let i = 0; i < tasks.length; i++) {
+            const task = tasks[i];
+            const taskPayload = {
+              routine: routineId,
+              name: task.name,
+              description: task.description || '',
+              scheduledTime: formData.time || '09:00',
+              estimatedDuration: task.estimatedTime || 15,
+              completionCriteria: task.completionCriteria || 'manual',
+              order: i,
+            };
+            if (task.id && isMongoObjectId(task.id)) {
+              await axiosClient.put(`/api/routines/user/${clientId}/task/${task.id}`, taskPayload);
+            } else {
+              await axiosClient.post(`/api/routines/user/${clientId}/task`, taskPayload);
+            }
+          }
+        } else {
+          const tasksForApi = tasks.map((t, i) => ({
+            name: t.name,
+            description: t.description || '',
+            estimatedDuration: t.estimatedTime || 15,
+            completionCriteria: t.completionCriteria || 'manual',
+            order: i,
+          }));
+          const rRes = await axiosClient.post(`/api/routines/user/${clientId}`, {
+            ...routinePayload,
+            tasks: tasksForApi,
+          });
+          routineId = rRes.data._id;
+          await axiosClient.patch(`/api/routines/user/${clientId}/${routineId}/activate`).catch(() => {});
         }
+      } else {
+        if (editId) {
+          await axiosClient.put(`/api/routines/${editId}`, routinePayload);
+          routineId = editId;
+        } else {
+          const rRes = await axiosClient.post('/api/routines', routinePayload);
+          routineId = rRes.data._id;
+          await axiosClient.patch(`/api/routines/${routineId}/set-active`).catch(() => {});
+        }
+        for (const task of tasks) {
+          const taskPayload = {
+            routine: routineId,
+            name: task.name,
+            description: task.description || '',
+            scheduledTime: formData.time || '09:00',
+            type: 'daily',
+            estimatedDuration: task.estimatedTime || 15,
+            completionCriteria: task.completionCriteria || 'manual',
+          };
+          if (task.id && isMongoObjectId(task.id) && editId) {
+            await axiosClient.put(`/api/tasks/${task.id}`, taskPayload);
+          } else {
+            await axiosClient.post('/api/tasks', taskPayload);
+          }
+        }
+      }
+
+      navigate(returnPath, {
+        state: {
+          message: `Routine "${formData.name}" ${isDraft ? 'saved as draft' : 'saved'} successfully!`,
+          type: 'success',
+        },
       });
     } catch (error) {
       console.error('Error saving routine:', error);
-      setErrors({ general: 'Failed to save routine. Please try again.' });
+      setErrors({ general: error.response?.data?.error || 'Failed to save routine. Please try again.' });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCancel = () => {
-    if (Object.keys(formData).some(key => formData[key] !== '' && formData[key] !== false && !Array.isArray(formData[key]))) {
+    if (Object.keys(formData).some(key => !['_originalTaskIds'].includes(key) && formData[key] !== '' && formData[key] !== false && !Array.isArray(formData[key]))) {
       if (window.confirm('Are you sure you want to cancel? All changes will be lost.')) {
-        navigate('/home-dashboard');
+        navigate(returnPath);
       }
     } else {
-      navigate('/home-dashboard');
+      navigate(returnPath);
     }
   };
 
-  const getCompletedSections = () => {
-    const completed = [];
-    sectionKeys.forEach(sectionKey => {
-      if (validateSection(sectionKey)) {
-        completed.push(sectionKey);
-      }
-    });
-    return completed;
-  };
+  const getCompletedSections = () => sectionKeys.filter(isSectionValid);
 
   if (isLoading) {
     return (
@@ -355,20 +502,21 @@ const RoutineBuilder = () => {
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-sm text-text-secondary mb-6" aria-label="Breadcrumb">
           <button 
-            onClick={() => navigate('/home-dashboard')}
+            onClick={() => navigate(returnPath)}
             className="hover:text-text-primary transition-colors duration-200"
           >
-            Dashboard
+            {returnPath === '/admin-dashboard' ? 'Admin Dashboard' : clientId ? 'Therapist Dashboard' : 'Dashboard'}
           </button>
           <Icon name="ChevronRight" size={16} />
-          <button 
-            onClick={() => navigate('/routine-builder')}
-            className="hover:text-text-primary transition-colors duration-200"
-          >
-            Routines
-          </button>
-          <Icon name="ChevronRight" size={16} />
-          <span className="text-text-primary">Create New Routine</span>
+          {clientId && (
+            <>
+              <span className="text-text-primary">Client Routines</span>
+              <Icon name="ChevronRight" size={16} />
+            </>
+          )}
+          <span className="text-text-primary">
+            {params.get('edit') ? 'Edit Routine' : 'Create New Routine'}
+          </span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -379,7 +527,7 @@ const RoutineBuilder = () => {
               currentStep={currentStep}
               totalSteps={totalSteps}
               completedSections={getCompletedSections()}
-              accessibilitySettings={accessibilitySettings}
+              accessibilitySettings={accessibilitySettings || {}}
             />
 
             {/* Template Selector Button */}
@@ -387,12 +535,24 @@ const RoutineBuilder = () => {
               <Button
                 variant="outline"
                 onClick={() => setShowTemplateSelector(true)}
-                iconName="Template"
+                iconName="LayoutTemplate"
                 iconPosition="left"
               >
                 Choose from Template
               </Button>
             </div>
+
+            {/* AI Routine Loaded Banner */}
+            {aiRoutineLoaded && (
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                <div className="flex items-center space-x-2">
+                  <Icon name="Sparkles" size={20} className="text-primary" />
+                  <p className="text-primary-700 font-medium">
+                    AI-generated routine loaded! Review and customize the details below, then save.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Error Message */}
             {errors.general && (
@@ -407,39 +567,39 @@ const RoutineBuilder = () => {
             {/* Form Sections */}
             <div className="space-y-4">
               <RoutineBasicInfo
-                formData={formData}
+                formData={formData || {}}
                 onUpdate={(data) => handleSectionUpdate('basic', data)}
                 isExpanded={expandedSections.basic}
                 onToggle={() => handleSectionToggle('basic')}
-                errors={errors}
-                accessibilitySettings={accessibilitySettings}
+                errors={errors || {}}
+                accessibilitySettings={accessibilitySettings || {}}
               />
 
               <ScheduleSettings
-                formData={formData}
+                formData={formData || {}}
                 onUpdate={(data) => handleSectionUpdate('schedule', data)}
                 isExpanded={expandedSections.schedule}
                 onToggle={() => handleSectionToggle('schedule')}
-                errors={errors}
-                accessibilitySettings={accessibilitySettings}
+                errors={errors || {}}
+                accessibilitySettings={accessibilitySettings || {}}
               />
 
               <TaskManager
-                formData={formData}
+                formData={formData || {}}
                 onUpdate={(data) => handleSectionUpdate('tasks', data)}
                 isExpanded={expandedSections.tasks}
                 onToggle={() => handleSectionToggle('tasks')}
-                errors={errors}
-                accessibilitySettings={accessibilitySettings}
+                errors={errors || {}}
+                accessibilitySettings={accessibilitySettings || {}}
               />
 
               <ReminderSettings
-                formData={formData}
+                formData={formData || {}}
                 onUpdate={(data) => handleSectionUpdate('reminders', data)}
                 isExpanded={expandedSections.reminders}
                 onToggle={() => handleSectionToggle('reminders')}
-                errors={errors}
-                accessibilitySettings={accessibilitySettings}
+                errors={errors || {}}
+                accessibilitySettings={accessibilitySettings || {}}
               />
             </div>
           </div>
@@ -458,9 +618,9 @@ const RoutineBuilder = () => {
               </div>
               
               <LivePreview
-                formData={formData}
+                formData={formData || {}}
                 isVisible={showLivePreview}
-                accessibilitySettings={accessibilitySettings}
+                accessibilitySettings={accessibilitySettings || {}}
               />
             </div>
           </div>

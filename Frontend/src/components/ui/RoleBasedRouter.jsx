@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Create Role Context
 const RoleContext = createContext();
@@ -15,7 +16,8 @@ export const useRole = () => {
 const RoleBasedRouter = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [userRole, setUserRole] = useState('user'); // 'user' or 'therapist'
+  const { user: authUser } = useAuth();
+  const [userRole, setUserRole] = useState('user'); // 'user', 'therapist', 'caregiver', or 'admin'
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [accessibilitySettings, setAccessibilitySettings] = useState({
     reducedMotion: false,
@@ -23,10 +25,18 @@ const RoleBasedRouter = ({ children }) => {
     fontSize: 'medium'
   });
 
+  // Sync userRole from auth user (e.g. after login)
   useEffect(() => {
-    // Load saved role from localStorage
+    const authRole = authUser?.role;
+    if (authRole && ['user', 'therapist', 'caregiver', 'admin'].includes(authRole)) {
+      setUserRole(authRole);
+    }
+  }, [authUser?.role]);
+
+  useEffect(() => {
+    // Load saved role from localStorage on initial load
     const savedRole = localStorage.getItem('userRole');
-    if (savedRole && (savedRole === 'user' || savedRole === 'therapist')) {
+    if (savedRole && ['user', 'therapist', 'caregiver', 'admin'].includes(savedRole)) {
       setUserRole(savedRole);
     }
 
@@ -45,19 +55,38 @@ const RoleBasedRouter = ({ children }) => {
   const roleRoutes = {
     user: [
       '/home-dashboard',
+      '/routines',
       '/routine-builder',
+      '/ai-routine',
+      '/ai-chat',
       '/gamification-hub',
+      '/messages',
       '/settings-accessibility'
     ],
     therapist: [
       '/therapist-dashboard',
+      '/routine-builder',
+      '/messages',
+      '/settings-accessibility'
+    ],
+    caregiver: [
+      '/caregiver-dashboard',
+      '/messages',
+      '/settings-accessibility'
+    ],
+    admin: [
+      '/admin-dashboard',
+      '/routine-builder',
+      '/ai-routine',
+      '/ai-chat',
       '/settings-accessibility'
     ],
     shared: [
       '/',
       '/login',
       '/login-registration',
-      '/forgot-password'
+      '/forgot-password',
+      '/reset-password'
     ]
   };
 
@@ -72,7 +101,10 @@ const RoleBasedRouter = ({ children }) => {
       setUserRole(newRole);
 
       // Navigate to appropriate dashboard
-      const targetRoute = newRole === 'therapist' ? '/therapist-dashboard' : '/home-dashboard';
+      const targetRoute = newRole === 'admin' ? '/admin-dashboard'
+        : newRole === 'therapist' ? '/therapist-dashboard' 
+        : newRole === 'caregiver' ? '/caregiver-dashboard' 
+        : '/home-dashboard';
       
       // Add slight delay for smooth transition if animations are enabled
       if (!accessibilitySettings.reducedMotion) {
@@ -91,13 +123,18 @@ const RoleBasedRouter = ({ children }) => {
 
   // Check if current route is accessible for current role
   const isRouteAccessible = useCallback((path) => {
-    return roleRoutes[userRole].includes(path) || roleRoutes.shared.includes(path);
+    if (roleRoutes[userRole]?.includes(path) || roleRoutes.shared?.includes(path)) return true;
+    if (userRole === 'user' && path.startsWith('/routines/')) return true; // routine detail view
+    return false;
   }, [userRole]);
 
   // Redirect if current route is not accessible
   useEffect(() => {
     if (!isRouteAccessible(location.pathname)) {
-      const defaultRoute = userRole === 'therapist' ? '/therapist-dashboard' : '/home-dashboard';
+      const defaultRoute = userRole === 'admin' ? '/admin-dashboard'
+        : userRole === 'therapist' ? '/therapist-dashboard' 
+        : userRole === 'caregiver' ? '/caregiver-dashboard' 
+        : '/home-dashboard';
       navigate(defaultRoute, { replace: true });
     }
   }, [userRole, location.pathname, navigate, isRouteAccessible]);
@@ -114,9 +151,21 @@ const RoleBasedRouter = ({ children }) => {
         },
         {
           label: 'Routines',
-          path: '/routine-builder',
+          path: '/routines',
           icon: 'Calendar',
           description: 'Create and manage routines'
+        },
+        {
+          label: 'AI Routine',
+          path: '/ai-routine',
+          icon: 'Sparkles',
+          description: 'Generate a routine from a short Q&A'
+        },
+        {
+          label: 'AI Assistant',
+          path: '/ai-chat',
+          icon: 'Bot',
+          description: 'Chat for routine setup and productivity tips'
         },
         {
           label: 'Progress',
@@ -137,6 +186,40 @@ const RoleBasedRouter = ({ children }) => {
           path: '/therapist-dashboard',
           icon: 'Activity',
           description: 'Monitor client progress and analytics'
+        },
+        {
+          label: 'Settings',
+          path: '/settings-accessibility',
+          icon: 'Settings',
+          description: 'Configure system preferences'
+        }
+      ],
+      caregiver: [
+        {
+          label: 'Dashboard',
+          path: '/caregiver-dashboard',
+          icon: 'Heart',
+          description: 'View assigned users and provide support'
+        },
+        {
+          label: 'Messages',
+          path: '/messages',
+          icon: 'MessageCircle',
+          description: 'Communicate with your assigned users'
+        },
+        {
+          label: 'Settings',
+          path: '/settings-accessibility',
+          icon: 'Settings',
+          description: 'Configure system preferences'
+        }
+      ],
+      admin: [
+        {
+          label: 'Admin Dashboard',
+          path: '/admin-dashboard',
+          icon: 'Shield',
+          description: 'Manage users, plans, assignments, and reports'
         },
         {
           label: 'Settings',
@@ -177,7 +260,7 @@ const RoleBasedRouter = ({ children }) => {
           className="sr-only"
           role="status"
           aria-live="polite"
-          aria-label={`Current view: ${userRole === 'therapist' ? 'Therapist Dashboard' : 'User Dashboard'}`}
+          aria-label={`Current view: ${userRole === 'admin' ? 'Admin Dashboard' : userRole === 'therapist' ? 'Therapist Dashboard' : userRole === 'caregiver' ? 'Caregiver Dashboard' : 'User Dashboard'}`}
         >
           {isTransitioning ? 'Switching views...' : `Viewing as ${userRole}`}
         </div>

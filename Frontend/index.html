@@ -12,6 +12,18 @@
 </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+    <script>
+      try {
+        var s = JSON.parse(localStorage.getItem('nestifynd-settings'));
+        if (s && s.theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else if (s && s.theme === 'high-contrast') {
+          document.documentElement.classList.add('high-contrast');
+        } else if (s && s.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch(e) {}
+    </script>
     <div class="dhiwise-code" id="root"></div>
     <script type="module" src="/src/index.jsx"></script>
   </body>

@@ -2,122 +2,88 @@ import React, { useState, useEffect, useRef } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import axiosClient from '../../../api/axiosClient';
+import { useAuth } from '../../../contexts/AuthContext';
 
-const MessagingIntegration = ({ 
-  selectedClient, 
-  accessibilitySettings 
+const MessagingIntegration = ({
+  selectedClient,
+  accessibilitySettings
 }) => {
+  const { user: authUser } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [messageFilter, setMessageFilter] = useState('all');
   const messagesEndRef = useRef(null);
 
-  // Mock messages data
   useEffect(() => {
-    if (selectedClient) {
-      const mockMessages = [
-        {
-          id: 1,
-          senderId: selectedClient.id,
-          senderName: selectedClient.name,
-          senderType: 'client',
-          content: "Hi Dr. Smith, I'm having trouble with my morning routine. I keep forgetting to take my medication.",
-          timestamp: new Date(Date.now() - 3600000),
-          read: true,
-          priority: 'normal',
-          type: 'text'
-        },
-        {
-          id: 2,
-          senderId: 'therapist-1',
-          senderName: 'Dr. Smith',
-          senderType: 'therapist',
-          content: "Thank you for reaching out. Let's work on setting up some reminder strategies. Have you tried using the app's notification feature?",
-          timestamp: new Date(Date.now() - 3300000),
-          read: true,
-          priority: 'normal',
-          type: 'text'
-        },
-        {
-          id: 3,
-          senderId: selectedClient.id,
-          senderName: selectedClient.name,
-          senderType: 'client',
-          content: "Yes, but I still miss it sometimes. Maybe we could try a different approach?",
-          timestamp: new Date(Date.now() - 3000000),
-          read: true,
-          priority: 'normal',
-          type: 'text'
-        },
-        {
-          id: 4,
-          senderId: 'therapist-1',
-          senderName: 'Dr. Smith',
-          senderType: 'therapist',
-          content: "Absolutely! Let\'s schedule a quick call to discuss some visual cues and habit stacking techniques that might work better for you.",
-          timestamp: new Date(Date.now() - 2700000),
-          read: true,
-          priority: 'normal',
-          type: 'text'
-        },
-        {
-          id: 5,
-          senderId: selectedClient.id,
-          senderName: selectedClient.name,
-          senderType: 'client',
-          content: "That sounds great! When would be a good time?",
-          timestamp: new Date(Date.now() - 1800000),
-          read: false,
-          priority: 'normal',
-          type: 'text'
-        }
-      ];
-      setMessages(mockMessages);
+    if (!selectedClient) {
+      setMessages([]);
+      return;
     }
-  }, [selectedClient]);
+    const contactId = selectedClient.id?.toString?.() || selectedClient.id;
+    if (!contactId) return;
+    (async () => {
+      try {
+        const { data } = await axiosClient.get(`/api/messages/messages?contactId=${contactId}`);
+        const myId = (authUser?.id?.toString && authUser.id.toString()) || authUser?.id;
+        const list = (Array.isArray(data) ? data : []).map((m) => {
+          const sid = (m.senderId?.toString && m.senderId.toString()) || m.senderId;
+          const isMe = sid === myId;
+          return {
+            id: m._id,
+            senderId: sid,
+            senderName: isMe ? (authUser?.name || 'Me') : selectedClient.name,
+            senderType: isMe ? 'therapist' : 'client',
+            content: m.content,
+            timestamp: m.createdAt ? new Date(m.createdAt) : new Date(),
+            read: m.read,
+            priority: 'normal',
+            type: 'text'
+          };
+        });
+        setMessages(list);
+      } catch (e) {
+        setMessages([]);
+      }
+    })();
+  }, [selectedClient, authUser?.name]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-
-    const message = {
-      id: Date.now(),
-      senderId: 'therapist-1',
-      senderName: 'Dr. Smith',
-      senderType: 'therapist',
-      content: newMessage,
-      timestamp: new Date(),
-      read: true,
-      priority: 'normal',
-      type: 'text'
-    };
-
-    setMessages(prev => [...prev, message]);
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedClient) return;
+    const contactId = selectedClient.id?.toString?.() || selectedClient.id;
+    const content = newMessage.trim();
     setNewMessage('');
-
-    // Simulate typing indicator
     setIsTyping(true);
-    setTimeout(() => {
+    try {
+      const { data } = await axiosClient.post('/api/messages/send', {
+        receiverId: contactId,
+        content,
+      });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: data._id,
+          senderId: authUser?.id || data.senderId,
+          senderName: authUser?.name || 'Me',
+          senderType: 'therapist',
+          content: data.content || content,
+          timestamp: data.createdAt ? new Date(data.createdAt) : new Date(),
+          read: true,
+          priority: 'normal',
+          type: 'text'
+        }
+      ]);
+    } catch (e) {
+      setNewMessage(content);
+    } finally {
       setIsTyping(false);
-      // Simulate client response
-      const clientResponse = {
-        id: Date.now() + 1,
-        senderId: selectedClient.id,
-        senderName: selectedClient.name,
-        senderType: 'client',
-        content: "Thank you for your help! I\'ll try that approach.",
-        timestamp: new Date(),
-        read: false,
-        priority: 'normal',
-        type: 'text'
-      };
-      setMessages(prev => [...prev, clientResponse]);
-    }, 2000);
+    }
   };
 
   const handleKeyPress = (e) => {

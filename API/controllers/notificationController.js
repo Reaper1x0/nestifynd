@@ -1,5 +1,8 @@
 // controllers/notificationController.js
 const User = require('../models/User');
+const Achievement = require('../models/Achievement');
+const Message = require('../models/Message');
+const moment = require('moment');
 const Routine = require('../models/Routine');
 const Task = require('../models/Task');
 const { sendEmailReminder } = require('../utils/emailService');
@@ -49,5 +52,44 @@ exports.sendScheduledReminders = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Failed to send reminders' });
+  }
+};
+
+exports.getCounts = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const sevenDaysAgo = moment().subtract(7, 'days').toDate();
+    
+    // Count unread messages where current user is the receiver
+    const unreadMessages = await Message.countDocuments({
+      receiverId: userId,
+      read: false
+    });
+    
+    // Count new achievements from last 7 days
+    const newAchievements = await Achievement.countDocuments({
+      userId,
+      earnedAt: { $gte: sevenDaysAgo }
+    });
+    
+    // Count pending routines for today
+    const today = new Date();
+    const dayOfWeek = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const pendingRoutines = await Routine.countDocuments({
+      user: userId,
+      isActive: true,
+      'schedule.daysOfWeek': dayOfWeek
+    });
+    
+    res.json({
+      messages: unreadMessages,
+      achievements: newAchievements,
+      routines: pendingRoutines,
+      reminders: 0,
+      system: 0
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ messages: 0, achievements: 0, routines: 0, reminders: 0, system: 0 });
   }
 };

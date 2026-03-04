@@ -27,13 +27,13 @@ const AlertSystem = ({
             category: 'completion',
             title: 'Low Completion Rate',
             message: `${client.name} has a completion rate of ${client.completionRate}% this week`,
-            timestamp: new Date(Date.now() - Math.random() * 86400000),
+            timestamp: client.lastActivity ? new Date(client.lastActivity) : new Date(),
             priority: 'medium',
             actionRequired: true
           });
         }
 
-        // Streak broken alert
+        // Streak broken alert - had activity before but streak is now 0
         if (client.currentStreak === 0 && client.completionRate > 0) {
           newAlerts.push({
             id: `streak-broken-${client.id}`,
@@ -43,27 +43,32 @@ const AlertSystem = ({
             category: 'streak',
             title: 'Streak Broken',
             message: `${client.name}'s daily streak was broken`,
-            timestamp: new Date(Date.now() - Math.random() * 43200000),
+            timestamp: client.lastActivity ? new Date(client.lastActivity) : new Date(),
             priority: 'high',
             actionRequired: true
           });
         }
 
-        // Extended absence alert
-        const daysSinceActivity = Math.floor((Date.now() - new Date(client.lastActivity)) / (1000 * 60 * 60 * 24));
-        if (daysSinceActivity > 3) {
-          newAlerts.push({
-            id: `absence-${client.id}`,
-            clientId: client.id,
-            clientName: client.name,
-            type: 'warning',
-            category: 'activity',
-            title: 'Extended Absence',
-            message: `${client.name} hasn't been active for ${daysSinceActivity} days`,
-            timestamp: new Date(client.lastActivity),
-            priority: 'high',
-            actionRequired: true
-          });
+        // Extended absence alert - only when we have valid lastActivity and it's > 3 days ago
+        if (client.lastActivity) {
+          const lastDate = new Date(client.lastActivity);
+          if (!isNaN(lastDate.getTime())) {
+            const daysSinceActivity = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (daysSinceActivity > 3) {
+              newAlerts.push({
+                id: `absence-${client.id}`,
+                clientId: client.id,
+                clientName: client.name,
+                type: 'warning',
+                category: 'activity',
+                title: 'Extended Absence',
+                message: `${client.name} hasn't been active for ${daysSinceActivity} days`,
+                timestamp: lastDate,
+                priority: 'high',
+                actionRequired: true
+              });
+            }
+          }
         }
 
         // Unread messages alert
@@ -76,7 +81,7 @@ const AlertSystem = ({
             category: 'communication',
             title: 'Multiple Unread Messages',
             message: `${client.unreadMessages} unread messages from ${client.name}`,
-            timestamp: new Date(Date.now() - Math.random() * 21600000),
+            timestamp: new Date(),
             priority: 'medium',
             actionRequired: false
           });
@@ -92,7 +97,7 @@ const AlertSystem = ({
             category: 'achievement',
             title: 'Excellent Progress',
             message: `${client.name} has maintained ${client.completionRate}% completion with a ${client.currentStreak}-day streak`,
-            timestamp: new Date(Date.now() - Math.random() * 3600000),
+            timestamp: client.lastActivity ? new Date(client.lastActivity) : new Date(),
             priority: 'low',
             actionRequired: false
           });
@@ -302,7 +307,9 @@ const AlertSystem = ({
                     
                     <div className="flex items-center justify-between">
                       <span className="text-xs opacity-75">
-                        {alert.timestamp.toLocaleString()}
+                        {alert.timestamp && !isNaN(new Date(alert.timestamp).getTime())
+                          ? new Date(alert.timestamp).toLocaleString()
+                          : '—'}
                       </span>
                       
                       <div className="flex items-center space-x-2">

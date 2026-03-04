@@ -1,0 +1,79 @@
+NestifyND — Feature Requirements Document
+Project Scope
+NestifyND is a full-stack MERN-based productivity platform built for neurodivergent users, providing routine planning, reminders, role-based access, and AI enhancements. This document outlines all the finalized features and system requirements.
+1. Core Features
+- Users can create and manage routines and tasks.
+- Users can only interact with tasks from their active routine.
+- Only one routine can be active at a time per user.
+- Users can snooze reminders (5 min, unlimited until next task).
+- Users can dismiss reminders (logged and notified to caregivers).
+- Tasks support completion toggle.
+- Reminders are automatically triggered for active routines.
+- Admins and users can set active routines.
+2. Roles and Permissions
+- Roles: Admin, User, Therapist, Caregiver
+  - Admin: Full control over all users, assignments, plans.
+  - User: Manages personal tasks/routines, assigns therapist/caregivers.
+  - Therapist: Manages multiple assigned users.
+  - Caregiver: Can support multiple users, receive notifications, limited overrides.
+3. Reminders and Notifications
+- Sent only for tasks in active routines.
+- Caregivers receive notification for each reminder and dismiss event.
+- Reminders are logged in the Activity model.
+4. Weekly Reporting
+- Tracks:
+  - Reminders Sent
+  - Tasks Completed / Pending
+  - Snoozes
+  - Dismissals
+- Delivered via:
+  - API JSON
+  - Downloadable CSV
+  - Weekly summary email (via mock emailService)
+5. Backend API
+- REST API for all user and admin operations.
+- Endpoints:
+  - /api/tasks/:id/toggle-complete
+  - /api/tasks/:id/snooze
+  - /api/tasks/:id/dismiss
+  - /api/reports/:userId
+  - /api/reports/:userId/download
+  - /api/reports/
+  - /api/reports/download/all
+6. Database Models
+- User
+- Routine
+- Task
+- Activity
+- UserAssignment (Therapist/Caregiver mapping)
+- Plan
+- Role
+- Weekly Report (computed, not stored)
+7. Automation and Logging
+- Cron jobs:
+  - sendReminders.js
+  - sendWeeklyEmails.js
+- Activity logs for all user actions.
+- Report generation logged per user and globally.
+8. Tech Stack
+- Backend: Node.js (Express), MongoDB (Mongoose)
+- Frontend: React / Glide (prototype), DhiWise (Rocket)
+- Emails: Mock service for now (console output)
+- Deployment-ready code structure
+
+Generated on: 2025-07-01 22:08:36
+9. UI Modes
+- Users can choose from various UI themes based on preference and neurodivergent needs.
+- Modes include light, dark, high-contrast, and low-distraction modes.
+- Themes can be preset or customized by the user.
+- Theme persistence per user stored in `uiModeId`.
+- Admin can assign a UI mode to a user.
+10. AI-Driven Features
+- Users can answer a Q&A to generate a routine using AI logic.
+- AI chatbot available to help with routine setup, queries, and productivity suggestions.
+- Admin-configured AI quote system can push motivational quotes into reminders (if enabled).
+- All AI logic accessible via backend APIs to integrate across platforms.
+11. To-Do Later Features
+- Full AI implementation (deeper integrations for Q&A, personalized routines, adaptive feedback)
+- Full UI mode implementation (toggleable real-time themes, persistent preferences, accessibility testing)
+- Stripe integration for payment and subscription handling (webhooks, secure checkout, plan enforcement)

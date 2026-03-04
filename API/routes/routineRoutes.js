@@ -31,6 +31,24 @@ router.get('/', auth, requirePermission('canCreateRoutines'), ctrl.getAll);
 
 /**
  * @swagger
+ * /api/routines/active:
+ *   get:
+ *     summary: Get user's active routine
+ *     tags: [Routines]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Active routine details
+ *       404:
+ *         description: No active routine found
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/active', auth, requirePermission('canCreateRoutines'), ctrl.getActiveRoutine);
+
+/**
+ * @swagger
  * /api/routines/{id}:
  *   get:
  *     summary: Get routine by ID
@@ -225,24 +243,73 @@ router.patch('/:id/set-active', auth, requireResourceAccess('routine'), requireP
 
 /**
  * @swagger
- * /api/routines/active:
+ * /api/routines/user/{userId}:
  *   get:
- *     summary: Get user's active routine
+ *     summary: Get routines for a specific user (for caregivers with permission)
  *     tags: [Routines]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to get routines for
  *     responses:
  *       200:
- *         description: Active routine details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Routine'
- *       404:
- *         description: No active routine found
- *       401:
- *         description: Unauthorized
+ *         description: List of user's routines
+ *       403:
+ *         description: Not authorized
  */
-router.get('/active', auth, requirePermission('canCreateRoutines'), ctrl.getActiveRoutine);
+router.get('/user/:userId', auth, ctrl.getUserRoutines);
+router.post('/user/:userId', auth, ctrl.createUserRoutine);
+
+/**
+ * @swagger
+ * /api/routines/user/{userId}/{routineId}:
+ *   get:
+ *     summary: Get a specific routine with tasks for a user (for caregivers)
+ *     tags: [Routines]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/user/:userId/:routineId', auth, ctrl.getUserRoutineById);
+
+/**
+ * @swagger
+ * /api/routines/user/{userId}/{routineId}:
+ *   put:
+ *     summary: Update a routine for a specific user (for caregivers with permission)
+ *     tags: [Routines]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put('/user/:userId/:routineId', auth, ctrl.updateUserRoutine);
+router.delete('/user/:userId/:routineId', auth, ctrl.deleteUserRoutine);
+
+/**
+ * @swagger
+ * /api/routines/user/{userId}/{routineId}/activate:
+ *   patch:
+ *     summary: Activate a routine for a specific user (for caregivers with permission)
+ *     tags: [Routines]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch('/user/:userId/:routineId/activate', auth, ctrl.activateUserRoutine);
+
+/**
+ * @swagger
+ * /api/routines/user/{userId}/task/{taskId}:
+ *   put:
+ *     summary: Update a task for a user (for caregivers with permission)
+ *     tags: [Routines]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put('/user/:userId/task/:taskId', auth, ctrl.updateUserTask);
+router.post('/user/:userId/task', auth, ctrl.createUserTask);
+router.delete('/user/:userId/task/:taskId', auth, ctrl.deleteUserTask);
 
 module.exports = router;
