@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { useAccessibility } from '../../../components/ui/AccessibilityNavWrapper';
@@ -12,6 +12,20 @@ const ChallengeCards = ({
   const { getNavigationClasses, effectiveSettings } = useAccessibility();
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [selectedChallenge, setSelectedChallenge] = useState(null);
+
+  useEffect(() => {
+    if (selectedChallenge) {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      const prevOverflow = document.body.style.overflow;
+      const prevPadding = document.body.style.paddingRight;
+      document.body.style.overflow = 'hidden';
+      if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+      return () => {
+        document.body.style.overflow = prevOverflow;
+        document.body.style.paddingRight = prevPadding;
+      };
+    }
+  }, [selectedChallenge]);
 
   const difficulties = [
     { id: 'all', label: 'All Levels', icon: 'Grid3x3' },
@@ -50,14 +64,14 @@ const ChallengeCards = ({
 
     return (
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        className="fixed inset-0 bg-black bg-opacity-50 z-[200] p-4 overflow-y-auto flex justify-center pt-20"
         onClick={onClose}
         role="dialog"
         aria-modal="true"
         aria-labelledby="challenge-modal-title"
       >
         <div 
-          className="bg-surface rounded-lg p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto"
+          className="bg-surface rounded-lg p-6 max-w-md w-full shadow-xl mt-8 mb-8 shrink-0"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}

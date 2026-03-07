@@ -18,6 +18,15 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
+  phoneNumber: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  emergencyContact: {
+    name: { type: String, default: '' },
+    phone: { type: String, default: '' }
+  },
   role: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Role',
@@ -49,6 +58,10 @@ const userSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
     default: null
+  },
+  settings: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   }
 }, { 
   timestamps: true 

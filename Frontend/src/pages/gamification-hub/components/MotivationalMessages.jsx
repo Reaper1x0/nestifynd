@@ -5,9 +5,11 @@ import { useAccessibility } from '../../../components/ui/AccessibilityNavWrapper
 
 const MotivationalMessages = ({ 
   userActivity = {}, 
+  recentAchievement = null,
   preferences = {},
   onDismissMessage,
-  onShareAchievement 
+  onShareAchievement,
+  onViewBadge 
 }) => {
   const { getNavigationClasses, effectiveSettings } = useAccessibility();
   const [currentMessage, setCurrentMessage] = useState(null);
@@ -56,8 +58,10 @@ const MotivationalMessages = ({
     {
       id: 'new_badge',
       type: 'achievement',
-      title: "New Badge Earned! 🏆",
-      message: "Congratulations! You\'ve earned the \'Consistency Champion\' badge for completing routines 5 days in a row.",
+      getTitle: () => "New Badge Earned! 🏆",
+      getMessage: (badge) => badge
+        ? `Congratulations! You've earned the '${badge.title}' badge. ${badge.description}`
+        : "Congratulations! You've earned a new badge!",
       icon: 'Award',
       color: 'success',
       trigger: 'badge_earned',
@@ -114,13 +118,13 @@ const MotivationalMessages = ({
         onShareAchievement && onShareAchievement(message);
         break;
       case 'view_progress':
-        // Navigate to progress view
+        document.getElementById('progress-analytics')?.scrollIntoView({ behavior: 'smooth' });
         break;
       case 'adjust_goals':
         // Navigate to settings
         break;
       case 'view_badge':
-        // Show badge details
+        onViewBadge && onViewBadge();
         break;
       case 'view_report':
         // Show weekly report
@@ -140,12 +144,12 @@ const MotivationalMessages = ({
 
   const getColorClasses = (color) => {
     const colorMap = {
-      primary: 'bg-primary-50 border-primary-200 text-primary-700',
-      success: 'bg-success-50 border-success-200 text-success-700',
-      warning: 'bg-warning-50 border-warning-200 text-warning-700',
-      error: 'bg-error-50 border-error-200 text-error-700'
+      primary: 'bg-primary-50 border-primary-200',
+      success: 'bg-success-50 border-success-200',
+      warning: 'bg-warning-50 border-warning-200',
+      error: 'bg-error-50 border-error-200'
     };
-    return colorMap[color] || colorMap.primary;
+    return `${colorMap[color] || colorMap.primary} text-text-primary`;
   };
 
   const getIconColor = (color) => {
@@ -198,11 +202,11 @@ const MotivationalMessages = ({
 
           {/* Text Content */}
           <div className="flex-1">
-            <h4 className="font-semibold text-current mb-1">
-              {currentMessage.title}
+            <h4 className="font-semibold text-text-primary mb-1">
+              {currentMessage.getTitle ? currentMessage.getTitle() : currentMessage.title}
             </h4>
-            <p className="text-sm text-current opacity-90 mb-3">
-              {currentMessage.message}
+            <p className="text-sm text-text-primary mb-3">
+              {currentMessage.getMessage ? currentMessage.getMessage(recentAchievement) : currentMessage.message}
             </p>
 
             {/* Action Buttons */}
@@ -226,8 +230,8 @@ const MotivationalMessages = ({
 
         {/* Progress Indicator (for certain message types) */}
         {currentMessage.type === 'encouragement' && userActivity.completionRate && (
-          <div className="mt-4 pt-3 border-t border-current border-opacity-20">
-            <div className="flex items-center justify-between text-xs text-current opacity-80 mb-1">
+          <div className="mt-4 pt-3 border-t border-border">
+            <div className="flex items-center justify-between text-xs text-text-primary mb-1">
               <span>Weekly Progress</span>
               <span>{Math.round(userActivity.completionRate * 100)}%</span>
             </div>

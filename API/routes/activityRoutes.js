@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const auth = require('../middlewares/auth');
 const ctrl = require('../controllers/activityController');
 
 /**
@@ -42,7 +43,7 @@ const ctrl = require('../controllers/activityController');
  *       500:
  *         description: Server error
  */
-router.post('/', ctrl.log);
+router.post('/', auth, ctrl.log);
 
 /**
  * @swagger
@@ -80,6 +81,29 @@ router.post('/', ctrl.log);
  *       500:
  *         description: Server error
  */
-router.get('/', ctrl.getAll);
+router.get('/', auth, ctrl.getMyActivities);
+
+/**
+ * @swagger
+ * /api/activities/user/{userId}:
+ *   get:
+ *     summary: Get activities for a specific user (for caregivers/therapists)
+ *     tags: [Activities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user ID to get activities for
+ *     responses:
+ *       200:
+ *         description: List of user activities
+ *       403:
+ *         description: Not authorized
+ */
+router.get('/user/:userId', auth, ctrl.getUserActivities);
 
 module.exports = router;

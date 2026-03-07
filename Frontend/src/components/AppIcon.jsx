@@ -10,7 +10,8 @@ function Icon({
     strokeWidth = 2,
     ...props
 }) {
-    const IconComponent = LucideIcons[name];
+    const safeName = name && typeof name === 'string' ? name : 'HelpCircle';
+    const IconComponent = LucideIcons[safeName];
 
     if (!IconComponent) {
         return <HelpCircle size={size} color="gray" strokeWidth={strokeWidth} className={className} {...props} />;

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { register, login } = require('../controllers/authController');
+const { register, login, forgotPassword, resetPassword, getProfile, updateProfile, getSettings, updateSettings, exportData, deleteAccount } = require('../controllers/authController');
+const auth = require('../middlewares/auth');
 
 /**
  * @swagger
@@ -105,5 +106,14 @@ router.post('/register', register);
  *         description: Server error
  */
 router.post('/login', login);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
+
+router.get('/profile', auth, getProfile);
+router.put('/profile', auth, updateProfile);
+router.get('/settings', auth, getSettings);
+router.put('/settings', auth, updateSettings);
+router.post('/export', auth, exportData);
+router.delete('/account', auth, deleteAccount);
 
 module.exports = router;

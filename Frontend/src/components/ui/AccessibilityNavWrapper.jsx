@@ -68,53 +68,18 @@ const AccessibilityNavWrapper = ({ children }) => {
     };
   }, []);
 
-  // Apply accessibility settings to document
+  // Theme/dark/high-contrast/font-size/reduced-motion classes are managed
+  // globally by ThemeProvider (contexts/ThemeContext.jsx). Only apply
+  // focus indicator settings here to avoid conflicts.
   useEffect(() => {
     const root = document.documentElement;
-    
-    // Apply theme
-    if (accessibilitySettings.theme === 'dark' || 
-        (accessibilitySettings.theme === 'auto' && systemPreferences.darkMode)) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
 
-    // Apply high contrast
-    if (accessibilitySettings.highContrast || systemPreferences.highContrast) {
-      root.classList.add('high-contrast');
-    } else {
-      root.classList.remove('high-contrast');
-    }
-
-    // Apply font size
-    root.classList.remove('text-sm', 'text-base', 'text-lg', 'text-xl');
-    switch (accessibilitySettings.fontSize) {
-      case 'small': root.classList.add('text-sm');
-        break;
-      case 'large': root.classList.add('text-lg');
-        break;
-      case 'extra-large': root.classList.add('text-xl');
-        break;
-      default:
-        root.classList.add('text-base');
-    }
-
-    // Apply reduced motion
-    if (accessibilitySettings.reducedMotion || systemPreferences.reducedMotion) {
-      root.classList.add('reduce-motion');
-    } else {
-      root.classList.remove('reduce-motion');
-    }
-
-    // Apply focus indicators
     if (accessibilitySettings.focusIndicators === 'enhanced') {
       root.classList.add('enhanced-focus');
     } else {
       root.classList.remove('enhanced-focus');
     }
-
-  }, [accessibilitySettings, systemPreferences]);
+  }, [accessibilitySettings.focusIndicators]);
 
   // Save settings when they change
   useEffect(() => {

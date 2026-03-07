@@ -20,9 +20,23 @@ const PointsSystem = ({
   ];
 
   const RewardModal = ({ reward, onClose, onRedeem }) => {
+    const [redeeming, setRedeeming] = useState(false);
     if (!reward) return null;
 
     const canAfford = currentPoints >= reward.cost;
+
+    const handleRedeem = async () => {
+      if (!canAfford || !onRedeem) return;
+      setRedeeming(true);
+      try {
+        await onRedeem(reward);
+        onClose();
+      } catch (err) {
+        alert(err.response?.data?.message || err.message || 'Failed to redeem reward');
+      } finally {
+        setRedeeming(false);
+      }
+    };
 
     return (
       <div 
@@ -81,16 +95,11 @@ const PointsSystem = ({
               </Button>
               <Button
                 variant={canAfford ? "primary" : "outline"}
-                onClick={() => {
-                  if (canAfford) {
-                    onRedeem(reward);
-                    onClose();
-                  }
-                }}
-                disabled={!canAfford}
+                onClick={handleRedeem}
+                disabled={!canAfford || redeeming}
                 className="flex-1"
               >
-                {canAfford ? 'Redeem' : 'Not enough points'}
+                {redeeming ? 'Redeeming...' : (canAfford ? 'Redeem' : 'Not enough points')}
               </Button>
             </div>
           </div>

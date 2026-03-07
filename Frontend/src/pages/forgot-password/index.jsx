@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Icon from '../../components/AppIcon';
+import axiosClient from '../../api/axiosClient';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -32,11 +33,10 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      // Mock API call: simulate sending reset link
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await axiosClient.post('/api/auth/forgot-password', { email });
       setSubmitted(true);
     } catch (err) {
-      setError('Something went wrong. Please try again later.');
+      setError(err.response?.data?.msg || 'Something went wrong. Please try again later.');
     } finally {
       setLoading(false);
     }

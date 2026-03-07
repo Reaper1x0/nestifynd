@@ -9,7 +9,8 @@ const RegisterForm = ({ onSubmit, loading, error, accessibilitySettings }) => {
     email: '',
     password: '',
     confirmPassword: '',
-    caregiverEmail: ''
+    caregiverEmail: '',
+    role: 'user'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -111,6 +112,41 @@ const RegisterForm = ({ onSubmit, loading, error, accessibilitySettings }) => {
             {fieldErrors.name}
           </p>
         )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-text-primary mb-2">
+          I am a
+        </label>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { value: 'user', label: 'User', icon: 'User', desc: 'Managing my routines' },
+            { value: 'therapist', label: 'Therapist', icon: 'Stethoscope', desc: 'Supporting clients' },
+            { value: 'caregiver', label: 'Caregiver', icon: 'Heart', desc: 'Supporting someone' }
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, role: opt.value }))}
+              disabled={loading}
+              className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary ${
+                formData.role === opt.value
+                  ? 'border-primary bg-primary-50'
+                  : 'border-border hover:border-primary-200 hover:bg-surface-secondary'
+              }`}
+            >
+              <Icon
+                name={opt.icon}
+                size={20}
+                className={formData.role === opt.value ? 'text-primary mb-1' : 'text-text-secondary mb-1'}
+              />
+              <span className={`text-sm font-medium ${formData.role === opt.value ? 'text-primary' : 'text-text-primary'}`}>
+                {opt.label}
+              </span>
+              <span className="text-xs text-text-secondary mt-0.5">{opt.desc}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div>
@@ -246,7 +282,7 @@ const RegisterForm = ({ onSubmit, loading, error, accessibilitySettings }) => {
         )}
       </div>
 
-      <div>
+      {formData.role === 'user' && <div>
         <label 
           htmlFor="caregiverEmail" 
           className="block text-sm font-medium text-text-primary mb-2"
@@ -282,7 +318,7 @@ const RegisterForm = ({ onSubmit, loading, error, accessibilitySettings }) => {
             {fieldErrors.caregiverEmail}
           </p>
         )}
-      </div>
+      </div>}
 
       {error && (
         <div 

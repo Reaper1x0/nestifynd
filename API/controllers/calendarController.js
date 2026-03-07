@@ -4,12 +4,12 @@ const Task = require('../models/Task');
 const { getCalendarEvents } = require('../utils/calendarHelper');
 
 exports.getCalendarView = async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user._id;
   const { startDate, endDate } = req.query;
 
   try {
-    const routines = await Routine.find({ userId });
-    const tasks = await Task.find({ userId });
+    const routines = await Routine.find({ user: userId });
+    const tasks = await Task.find({ user: userId });
 
     const events = getCalendarEvents(routines, tasks, startDate, endDate);
 

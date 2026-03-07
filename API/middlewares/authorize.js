@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const UserAssignment = require('../models/UserAssignment');
+const { getDefaultPermissionsForRole } = require('../utils/rolePermissions');
 
 /**
  * Middleware to check if user has specific role
@@ -26,6 +27,17 @@ const requireRole = (...roles) => {
 };
 
 /**
+ * Helper: resolve effective permission for role (from DB or default for role name)
+ */
+function hasPermission(role, permission) {
+  if (!role) return false;
+  const fromDb = role.permissions && role.permissions[permission];
+  if (fromDb === true) return true;
+  const defaults = getDefaultPermissionsForRole(role.name);
+  return defaults[permission] === true;
+}
+
+/**
  * Middleware to check if user has specific permission
  */
 const requirePermission = (permission) => {
@@ -37,7 +49,7 @@ const requirePermission = (permission) => {
       });
     }
 
-    if (!req.user.role?.permissions?.[permission]) {
+    if (!hasPermission(req.user.role, permission)) {
       return res.status(403).json({ 
         success: false,
         message: `Access denied. Required permission: ${permission}` 

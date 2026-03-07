@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
@@ -14,8 +14,17 @@ const TaskManager = ({
   const [localData, setLocalData] = useState({
     tasks: formData.tasks || [],
     allowPartialCompletion: formData.allowPartialCompletion || false,
-    requireAllTasks: formData.requireAllTasks || true
+    requireAllTasks: formData.requireAllTasks !== false
   });
+
+  // Sync with parent formData when it changes (e.g., from AI routine or template)
+  useEffect(() => {
+    setLocalData({
+      tasks: formData.tasks || [],
+      allowPartialCompletion: formData.allowPartialCompletion || false,
+      requireAllTasks: formData.requireAllTasks !== false
+    });
+  }, [formData.tasks, formData.allowPartialCompletion, formData.requireAllTasks]);
 
   const [newTask, setNewTask] = useState({
     name: '',

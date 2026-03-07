@@ -91,35 +91,45 @@ const AccessibilitySection = ({
               Theme Preference
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {themeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleThemeChange(option.value)}
-                  className={`
-                    flex items-center space-x-3 p-4 rounded-lg border-2 text-left
-                    transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary
-                    ${settings.theme === option.value
-                      ? 'border-primary bg-primary-50 text-primary' :'border-border hover:border-primary-200 hover:bg-surface-secondary'
-                    }
-                  `}
-                  aria-pressed={settings.theme === option.value}
-                  aria-describedby={`theme-${option.value}-desc`}
-                >
-                  <Icon name={option.icon} size={20} />
-                  <div className="flex-1">
-                    <div className="font-medium">{option.label}</div>
-                    <div 
-                      id={`theme-${option.value}-desc`}
-                      className="text-xs text-text-secondary mt-1"
-                    >
-                      {option.description}
+              {themeOptions.map((option) => {
+                const isSelected = settings.theme === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleThemeChange(option.value)}
+                    className={`
+                      flex items-center space-x-3 p-4 rounded-lg border-2 text-left
+                      transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary
+                      ${isSelected
+                        ? 'border-primary bg-primary-50'
+                        : 'border-border hover:border-primary-200 hover:bg-surface-secondary'
+                      }
+                    `}
+                    aria-pressed={isSelected}
+                    aria-describedby={`theme-${option.value}-desc`}
+                  >
+                    <Icon
+                      name={option.icon}
+                      size={20}
+                      className={isSelected ? 'text-primary' : 'text-text-secondary'}
+                    />
+                    <div className="flex-1">
+                      <div className={`font-medium ${isSelected ? 'text-primary' : 'text-text-primary'}`}>
+                        {option.label}
+                      </div>
+                      <div 
+                        id={`theme-${option.value}-desc`}
+                        className="text-xs text-text-secondary mt-1"
+                      >
+                        {option.description}
+                      </div>
                     </div>
-                  </div>
-                  {settings.theme === option.value && (
-                    <Icon name="Check" size={16} className="text-primary" />
-                  )}
-                </button>
-              ))}
+                    {isSelected && (
+                      <Icon name="Check" size={16} className="text-primary" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -129,36 +139,40 @@ const AccessibilitySection = ({
               Font Size
             </label>
             <div className="space-y-3">
-              {fontSizeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleFontSizeChange(option.value)}
-                  className={`
-                    flex items-center justify-between w-full p-4 rounded-lg border-2 text-left
-                    transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary
-                    ${settings.fontSize === option.value
-                      ? 'border-primary bg-primary-50' :'border-border hover:border-primary-200 hover:bg-surface-secondary'
-                    }
-                  `}
-                  aria-pressed={settings.fontSize === option.value}
-                  aria-describedby={`font-${option.value}-desc`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className={`font-medium ${option.size}`}>
-                      {option.label}
-                    </span>
-                    <span 
-                      id={`font-${option.value}-desc`}
-                      className="text-sm text-text-secondary"
-                    >
-                      {option.description}
-                    </span>
-                  </div>
-                  {settings.fontSize === option.value && (
-                    <Icon name="Check" size={16} className="text-primary" />
-                  )}
-                </button>
-              ))}
+              {fontSizeOptions.map((option) => {
+                const isSelected = settings.fontSize === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleFontSizeChange(option.value)}
+                    className={`
+                      flex items-center justify-between w-full p-4 rounded-lg border-2 text-left
+                      transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary
+                      ${isSelected
+                        ? 'border-primary bg-primary-50'
+                        : 'border-border hover:border-primary-200 hover:bg-surface-secondary'
+                      }
+                    `}
+                    aria-pressed={isSelected}
+                    aria-describedby={`font-${option.value}-desc`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className={`font-medium ${option.size} ${isSelected ? 'text-primary' : 'text-text-primary'}`}>
+                        {option.label}
+                      </span>
+                      <span 
+                        id={`font-${option.value}-desc`}
+                        className="text-sm text-text-secondary"
+                      >
+                        {option.description}
+                      </span>
+                    </div>
+                    {isSelected && (
+                      <Icon name="Check" size={16} className="text-primary" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
             
             {/* Font Size Preview */}
@@ -171,67 +185,63 @@ const AccessibilitySection = ({
           </div>
 
           {/* Motion Preferences */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="block text-sm font-medium text-text-primary">
-                  Reduced Motion
-                </label>
-                <p className="text-xs text-text-secondary mt-1">
-                  Minimizes animations and transitions for better focus
-                </p>
-              </div>
-              <button
-                onClick={() => onSettingChange('reducedMotion', !settings.reducedMotion)}
-                className={`
-                  relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                  focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                  ${settings.reducedMotion ? 'bg-primary' : 'bg-gray-200'}
-                `}
-                role="switch"
-                aria-checked={settings.reducedMotion}
-                aria-labelledby="reduced-motion-label"
-              >
-                <span
-                  className={`
-                    inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                    ${settings.reducedMotion ? 'translate-x-6' : 'translate-x-1'}
-                  `}
-                />
-              </button>
+          <div className="flex items-center justify-between p-4 bg-surface-secondary rounded-lg">
+            <div className="min-w-0 flex-1 mr-4">
+              <label className="block text-sm font-medium text-text-primary">
+                Reduced Motion
+              </label>
+              <p className="text-xs text-text-secondary mt-1">
+                Minimizes animations and transitions for better focus
+              </p>
             </div>
+            <button
+              onClick={() => onSettingChange('reducedMotion', !settings.reducedMotion)}
+              className={`
+                relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors
+                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+                ${settings.reducedMotion ? 'bg-primary' : 'bg-border'}
+              `}
+              role="switch"
+              aria-checked={settings.reducedMotion}
+              aria-labelledby="reduced-motion-label"
+            >
+              <span
+                className={`
+                  inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                  ${settings.reducedMotion ? 'translate-x-6' : 'translate-x-1'}
+                `}
+              />
+            </button>
           </div>
 
           {/* High Contrast Mode */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="block text-sm font-medium text-text-primary">
-                  High Contrast Mode
-                </label>
-                <p className="text-xs text-text-secondary mt-1">
-                  Increases contrast for better visibility
-                </p>
-              </div>
-              <button
-                onClick={() => onSettingChange('highContrast', !settings.highContrast)}
-                className={`
-                  relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                  focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                  ${settings.highContrast ? 'bg-primary' : 'bg-gray-200'}
-                `}
-                role="switch"
-                aria-checked={settings.highContrast}
-                aria-labelledby="high-contrast-label"
-              >
-                <span
-                  className={`
-                    inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                    ${settings.highContrast ? 'translate-x-6' : 'translate-x-1'}
-                  `}
-                />
-              </button>
+          <div className="flex items-center justify-between p-4 bg-surface-secondary rounded-lg">
+            <div className="min-w-0 flex-1 mr-4">
+              <label className="block text-sm font-medium text-text-primary">
+                High Contrast Mode
+              </label>
+              <p className="text-xs text-text-secondary mt-1">
+                Increases contrast for better visibility
+              </p>
             </div>
+            <button
+              onClick={() => onSettingChange('highContrast', !settings.highContrast)}
+              className={`
+                relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors
+                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+                ${settings.highContrast ? 'bg-primary' : 'bg-border'}
+              `}
+              role="switch"
+              aria-checked={settings.highContrast}
+              aria-labelledby="high-contrast-label"
+            >
+              <span
+                className={`
+                  inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                  ${settings.highContrast ? 'translate-x-6' : 'translate-x-1'}
+                `}
+              />
+            </button>
           </div>
 
           {/* Screen Reader Settings */}
@@ -267,35 +277,33 @@ const AccessibilitySection = ({
           </div>
 
           {/* Keyboard Navigation */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="block text-sm font-medium text-text-primary">
-                  Enhanced Keyboard Navigation
-                </label>
-                <p className="text-xs text-text-secondary mt-1">
-                  Improved focus indicators and keyboard shortcuts
-                </p>
-              </div>
-              <button
-                onClick={() => onSettingChange('enhancedKeyboard', !settings.enhancedKeyboard)}
-                className={`
-                  relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                  focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                  ${settings.enhancedKeyboard ? 'bg-primary' : 'bg-gray-200'}
-                `}
-                role="switch"
-                aria-checked={settings.enhancedKeyboard}
-                aria-labelledby="enhanced-keyboard-label"
-              >
-                <span
-                  className={`
-                    inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                    ${settings.enhancedKeyboard ? 'translate-x-6' : 'translate-x-1'}
-                  `}
-                />
-              </button>
+          <div className="flex items-center justify-between p-4 bg-surface-secondary rounded-lg">
+            <div className="min-w-0 flex-1 mr-4">
+              <label className="block text-sm font-medium text-text-primary">
+                Enhanced Keyboard Navigation
+              </label>
+              <p className="text-xs text-text-secondary mt-1">
+                Improved focus indicators and keyboard shortcuts
+              </p>
             </div>
+            <button
+              onClick={() => onSettingChange('enhancedKeyboard', !settings.enhancedKeyboard)}
+              className={`
+                relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors
+                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+                ${settings.enhancedKeyboard ? 'bg-primary' : 'bg-border'}
+              `}
+              role="switch"
+              aria-checked={settings.enhancedKeyboard}
+              aria-labelledby="enhanced-keyboard-label"
+            >
+              <span
+                className={`
+                  inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                  ${settings.enhancedKeyboard ? 'translate-x-6' : 'translate-x-1'}
+                `}
+              />
+            </button>
           </div>
         </div>
       )}

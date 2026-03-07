@@ -1,10 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import axiosClient from '../../../api/axiosClient';
 
 const QuickActions = () => {
   const navigate = useNavigate();
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [newAchievements, setNewAchievements] = useState(0);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [messagesRes, progressRes] = await Promise.all([
+          axiosClient.get('/api/messages/unread-count').catch(() => ({ data: { unreadCount: 0 } })),
+          axiosClient.get('/api/gamification/progress').catch(() => ({ data: { newAchievementsCount: 0 } }))
+        ]);
+        
+        setUnreadMessages(messagesRes.data?.unreadCount || 0);
+        setNewAchievements(progressRes.data?.newAchievementsCount || 0);
+      } catch (error) {
+        console.error('Error fetching counts:', error);
+      }
+    };
+
+    fetchCounts();
+  }, []);
 
   const quickActions = [
     {
@@ -37,8 +58,8 @@ const QuickActions = () => {
       color: 'text-success',
       bgColor: 'bg-success-50',
       borderColor: 'border-success-200',
-      action: () => {},
-      badge: 2
+      action: () => navigate('/messages'),
+      badge: unreadMessages > 0 ? unreadMessages : null
     },
     {
       id: 4,
@@ -49,7 +70,7 @@ const QuickActions = () => {
       bgColor: 'bg-warning-50',
       borderColor: 'border-warning-200',
       action: () => navigate('/gamification-hub'),
-      badge: 1
+      badge: newAchievements > 0 ? newAchievements : null
     },
     {
       id: 5,
@@ -84,7 +105,7 @@ const QuickActions = () => {
         </h2>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {quickActions.map((action) => (
           <button
             key={action.id}
@@ -104,7 +125,7 @@ const QuickActions = () => {
               </span>
             )}
             
-            <div className={`w-12 h-12 rounded-full bg-surface flex items-center justify-center mb-3 border ${action.borderColor} group-hover:scale-110 transition-transform`}>
+            <div className={`w-12 h-12 shrink-0 rounded-full bg-surface flex items-center justify-center mb-3 border ${action.borderColor} group-hover:scale-110 transition-transform`}>
               <Icon 
                 name={action.icon} 
                 size={24} 
@@ -112,11 +133,11 @@ const QuickActions = () => {
               />
             </div>
             
-            <h3 className="text-sm font-medium text-text-primary mb-1">
+            <h3 className="text-sm font-medium text-text-primary mb-1 w-full overflow-hidden text-ellipsis whitespace-nowrap">
               {action.title}
             </h3>
             
-            <p className="text-xs text-text-secondary leading-tight">
+            <p className="text-xs text-text-secondary leading-snug w-full line-clamp-2">
               {action.description}
             </p>
           </button>

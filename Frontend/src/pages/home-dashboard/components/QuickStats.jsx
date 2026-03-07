@@ -1,55 +1,82 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import axiosClient from '../../../api/axiosClient';
 
 const QuickStats = () => {
-  const weeklyData = [
-    { day: 'Mon', completed: 8, total: 10 },
-    { day: 'Tue', completed: 9, total: 10 },
-    { day: 'Wed', completed: 7, total: 10 },
-    { day: 'Thu', completed: 10, total: 10 },
-    { day: 'Fri', completed: 6, total: 10 },
-    { day: 'Sat', completed: 8, total: 10 },
-    { day: 'Sun', completed: 9, total: 10 }
-  ];
+  const [statsData, setStatsData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const completionData = [
-    { name: 'Completed', value: 67, color: '#10B981' },
-    { name: 'Pending', value: 33, color: '#E5E7EB' }
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await axiosClient.get('/api/dashboard/stats');
+        setStatsData(res.data);
+      } catch (e) {
+        setStatsData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const streak = statsData?.streak?.currentStreak ?? 0;
+  const longestStreak = statsData?.streak?.longestStreak ?? 0;
+  const totalBadges = statsData?.totalBadges ?? 0;
+  const totalRoutines = statsData?.totalRoutines ?? 0;
+  const activeRoutines = statsData?.activeRoutinesCount ?? 0;
+  const weeklyCompletion = statsData?.weeklyCompletion ?? 0;
+  const weeklyChange = statsData?.weeklyCompletionChange ?? '0%';
+  const weeklyChartData = statsData?.weeklyChartData ?? [
+    { day: 'Mon', completed: 0, total: 1 },
+    { day: 'Tue', completed: 0, total: 1 },
+    { day: 'Wed', completed: 0, total: 1 },
+    { day: 'Thu', completed: 0, total: 1 },
+    { day: 'Fri', completed: 0, total: 1 },
+    { day: 'Sat', completed: 0, total: 1 },
+    { day: 'Sun', completed: 0, total: 1 }
   ];
+  const completedPct = statsData?.overallCompletion?.completed ?? 0;
+  const pendingPct = statsData?.overallCompletion?.pending ?? 100;
+  const completionData = [
+    { name: 'Completed', value: completedPct, color: '#10B981' },
+    { name: 'Pending', value: pendingPct, color: '#E5E7EB' }
+  ];
+  const recentBadges = statsData?.recentBadges ?? [];
 
   const stats = [
     {
-      label: "Weekly Completion",
-      value: "67%",
-      change: "+5%",
-      changeType: "positive",
-      icon: "TrendingUp",
-      color: "text-success"
+      label: 'Weekly Completion',
+      value: `${weeklyCompletion}%`,
+      change: weeklyChange,
+      changeType: weeklyChange.startsWith('+') ? 'positive' : weeklyChange.startsWith('-') ? 'negative' : 'neutral',
+      icon: 'TrendingUp',
+      color: 'text-success'
     },
     {
-      label: "Current Streak",
-      value: "12 days",
-      change: "+2 days",
-      changeType: "positive",
-      icon: "Zap",
-      color: "text-warning"
+      label: 'Current Streak',
+      value: `${streak} days`,
+      change: longestStreak > streak ? `Best: ${longestStreak}` : '+0',
+      changeType: 'positive',
+      icon: 'Zap',
+      color: 'text-warning'
     },
     {
-      label: "Total Routines",
-      value: "24",
-      change: "+3 this week",
-      changeType: "positive",
-      icon: "Calendar",
-      color: "text-primary"
+      label: 'Total Routines',
+      value: String(totalRoutines),
+      change: activeRoutines > 0 ? `${activeRoutines} Active` : '—',
+      changeType: 'positive',
+      icon: 'Calendar',
+      color: 'text-primary'
     },
     {
-      label: "Achievements",
-      value: "8",
-      change: "+1 today",
-      changeType: "positive",
-      icon: "Award",
-      color: "text-secondary"
+      label: 'Achievements',
+      value: String(totalBadges),
+      change: 'Badges',
+      changeType: 'positive',
+      icon: 'Award',
+      color: 'text-secondary'
     }
   ];
 
@@ -67,7 +94,11 @@ const QuickStats = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map((stat, index) => (
+        {loading ? (
+          <div className="col-span-2 lg:col-span-4 flex items-center justify-center py-8 text-text-secondary">
+            Loading stats...
+          </div>
+        ) : stats.map((stat, index) => (
           <div
             key={index}
             className="bg-surface-secondary rounded-lg p-4 border border-border hover:border-primary-200 transition-colors"
@@ -75,7 +106,7 @@ const QuickStats = () => {
             <div className="flex items-center justify-between mb-2">
               <Icon name={stat.icon} size={20} className={stat.color} />
               <span className={`text-xs font-medium ${
-                stat.changeType === 'positive' ? 'text-success' : 'text-error'
+                stat.changeType === 'positive' ? 'text-success' : stat.changeType === 'negative' ? 'text-error' : 'text-text-secondary'
               }`}>
                 {stat.change}
               </span>
@@ -100,7 +131,7 @@ const QuickStats = () => {
           </h3>
           <div className="h-48" aria-label="Weekly completion rate bar chart">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyData}>
+              <BarChart data={weeklyChartData}>
                 <XAxis 
                   dataKey="day" 
                   axisLine={false}
@@ -167,19 +198,21 @@ const QuickStats = () => {
           Recent Achievements
         </h3>
         <div className="flex flex-wrap gap-2">
-          {[
-            { name: "7-Day Streak", icon: "Zap", color: "bg-warning text-warning-foreground" },
-            { name: "Early Bird", icon: "Sun", color: "bg-primary text-primary-foreground" },
-            { name: "Consistency King", icon: "Crown", color: "bg-success text-success-foreground" }
-          ].map((achievement, index) => (
-            <div
-              key={index}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium ${achievement.color}`}
-            >
-              <Icon name={achievement.icon} size={16} />
-              <span>{achievement.name}</span>
-            </div>
-          ))}
+          {loading ? (
+            <span className="text-text-secondary text-sm">Loading...</span>
+          ) : recentBadges.length > 0 ? (
+            recentBadges.map((achievement, index) => (
+              <div
+                key={index}
+                className="flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium bg-primary text-primary-foreground"
+              >
+                <Icon name={achievement.icon || 'Award'} size={16} />
+                <span>{achievement.name}</span>
+              </div>
+            ))
+          ) : (
+            <span className="text-text-secondary text-sm">Complete tasks and routines to earn badges</span>
+          )}
         </div>
       </div>
     </div>

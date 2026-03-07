@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import Header from '../../components/ui/Header';
 import TabNavigation from '../../components/ui/TabNavigation';
@@ -8,68 +8,70 @@ import AccessibilitySection from './components/AccessibilitySection';
 import AppearanceSection from './components/AppearanceSection';
 import NotificationSection from './components/NotificationSection';
 import AccountSection from './components/AccountSection';
+import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import axiosClient from '../../api/axiosClient';
+
+const DEFAULT_SETTINGS = {
+  theme: 'light',
+  fontSize: 'medium',
+  reducedMotion: false,
+  highContrast: false,
+  screenReaderVerbosity: 'standard',
+  enhancedKeyboard: true,
+  routineColors: {
+    morning: '#4F46E5',
+    afternoon: '#059669',
+    evening: '#7C3AED',
+    health: '#DC2626',
+    work: '#D97706',
+    personal: '#0891B2'
+  },
+  completionColors: {
+    completed: '#059669',
+    pending: '#D97706',
+    overdue: '#DC2626',
+    snoozed: '#7C3AED'
+  },
+  uiColors: {
+    primary: '#4F46E5',
+    secondary: '#7C3AED',
+    accent: '#10B981',
+    warning: '#D97706'
+  },
+  routineReminders: true,
+  taskDeadlines: true,
+  achievements: true,
+  messages: true,
+  systemUpdates: false,
+  motivationalOptIn: true,
+  visualAlerts: true,
+  audioAlerts: true,
+  vibrationAlerts: true,
+  soundVolume: 50,
+  escalationPattern: 'gentle',
+  quietHours: {
+    enabled: false,
+    start: '22:00',
+    end: '07:00'
+  },
+  timeZone: 'America/New_York',
+  profileName: '',
+  profileEmail: '',
+  profilePhone: '',
+  emergencyContact: '',
+  emergencyPhone: '',
+  shareProgress: true,
+  shareRoutines: true,
+  allowMessages: true,
+  dataCollection: 'essential'
+};
 
 const SettingsAccessibilityPage = () => {
-  const [settings, setSettings] = useState({
-    // Accessibility Settings
-    theme: 'light',
-    fontSize: 'medium',
-    reducedMotion: false,
-    highContrast: false,
-    screenReaderVerbosity: 'standard',
-    enhancedKeyboard: true,
-
-    // Appearance Settings
-    routineColors: {
-      morning: '#4F46E5',
-      afternoon: '#059669',
-      evening: '#7C3AED',
-      health: '#DC2626',
-      work: '#D97706',
-      personal: '#0891B2'
-    },
-    completionColors: {
-      completed: '#059669',
-      pending: '#D97706',
-      overdue: '#DC2626',
-      snoozed: '#7C3AED'
-    },
-    uiColors: {
-      primary: '#4F46E5',
-      secondary: '#7C3AED',
-      accent: '#10B981',
-      warning: '#D97706'
-    },
-
-    // Notification Settings
-    routineReminders: true,
-    taskDeadlines: true,
-    achievements: true,
-    messages: true,
-    systemUpdates: false,
-    visualAlerts: true,
-    audioAlerts: true,
-    vibrationAlerts: true,
-    soundVolume: 50,
-    escalationPattern: 'gentle',
-    quietHours: {
-      enabled: false,
-      start: '22:00',
-      end: '07:00'
-    },
-    timeZone: 'America/New_York',
-
-    // Account Settings
-    profileName: 'Alex Johnson',
-    profileEmail: 'alex.johnson@email.com',
-    profilePhone: '+1 (555) 123-4567',
-    emergencyContact: 'Sarah Johnson',
-    emergencyPhone: '+1 (555) 987-6543',
-    shareProgress: true,
-    shareRoutines: true,
-    allowMessages: true,
-    dataCollection: 'essential'
-  });
+  const { user: authUser } = useAuth();
+  const { settings: themeSettings, updateSettings: updateThemeSettings, uiModes, getUiModeForTheme } = useTheme();
+  const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS });
+  const loadedFromBackend = useRef(false);
 
   const [expandedSections, setExpandedSections] = useState({
     accessibility: true,
@@ -79,150 +81,104 @@ const SettingsAccessibilityPage = () => {
   });
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [saveStatus, setSaveStatus] = useState('saved'); // 'saved', 'saving', 'error'
+  const [saveStatus, setSaveStatus] = useState('saved');
 
-  // Load saved settings on component mount
   useEffect(() => {
-    const savedSettings = localStorage.getItem('nestifynd-settings');
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        setSettings(prev => ({ ...prev, ...parsed }));
-      } catch (error) {
-        console.error('Failed to load saved settings:', error);
-      }
+    if (themeSettings && !loadedFromBackend.current) {
+      setSettings(prev => ({ ...prev, ...themeSettings }));
+      loadedFromBackend.current = true;
+    }
+  }, [themeSettings]);
+
+  useEffect(() => {
+    if (!loadedFromBackend.current) {
+      const loadSettings = async () => {
+        try {
+          const { data } = await axiosClient.get('/api/auth/settings');
+          if (data && Object.keys(data).length > 0) {
+            setSettings(prev => ({ ...prev, ...data }));
+            loadedFromBackend.current = true;
+          }
+        } catch {
+          const saved = localStorage.getItem('nestifynd-settings');
+          if (saved) {
+            try {
+              setSettings(prev => ({ ...prev, ...JSON.parse(saved) }));
+            } catch { /* ignore */ }
+          }
+        }
+      };
+      loadSettings();
     }
   }, []);
 
-  // Apply settings to document when they change
-  useEffect(() => {
-    const root = document.documentElement;
-    
-    // Apply theme
-    if (settings.theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-
-    // Apply high contrast
-    if (settings.highContrast) {
-      root.classList.add('high-contrast');
-    } else {
-      root.classList.remove('high-contrast');
-    }
-
-    // Apply font size
-    root.classList.remove('text-sm', 'text-base', 'text-lg', 'text-xl');
-    switch (settings.fontSize) {
-      case 'small': root.classList.add('text-sm');
-        break;
-      case 'large': root.classList.add('text-lg');
-        break;
-      case 'extra-large': root.classList.add('text-xl');
-        break;
-      default:
-        root.classList.add('text-base');
-    }
-
-    // Apply reduced motion
-    if (settings.reducedMotion) {
-      root.classList.add('reduce-motion');
-    } else {
-      root.classList.remove('reduce-motion');
-    }
-  }, [settings.theme, settings.highContrast, settings.fontSize, settings.reducedMotion]);
-
   const handleSettingChange = (key, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
     setHasUnsavedChanges(true);
+    updateThemeSettings(newSettings);
   };
 
   const handleSectionToggle = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
   const saveSettings = async () => {
     setSaveStatus('saving');
-    
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Save to localStorage
+      const { motivationalOptIn, ...rest } = settings;
+      await axiosClient.put('/api/auth/settings', { ...rest, motivationalOptIn });
+
+      const uiMode = getUiModeForTheme(
+        settings.theme,
+        settings.theme === 'auto'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          : settings.theme === 'dark'
+      );
+      if (uiMode?._id) {
+        try {
+          await axiosClient.put('/api/ui-modes/uimode', {
+            uiModeId: uiMode._id,
+            customSettings: {
+              fontSize: settings.fontSize,
+              highContrast: settings.highContrast,
+              reducedMotion: settings.reducedMotion
+            }
+          });
+        } catch { /* non-critical */ }
+      }
+
       localStorage.setItem('nestifynd-settings', JSON.stringify(settings));
-      
       setSaveStatus('saved');
       setHasUnsavedChanges(false);
-      
-      // Show success message
+
       const announcement = document.getElementById('accessibility-announcements');
       if (announcement) {
         announcement.textContent = 'Settings saved successfully';
-        setTimeout(() => {
-          announcement.textContent = '';
-        }, 3000);
+        setTimeout(() => { announcement.textContent = ''; }, 3000);
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
-      setSaveStatus('error');
+      localStorage.setItem('nestifynd-settings', JSON.stringify(settings));
+      setSaveStatus('saved');
+      setHasUnsavedChanges(false);
     }
   };
 
   const resetAllSettings = () => {
     if (confirm('Are you sure you want to reset all settings to their default values? This action cannot be undone.')) {
-      const defaultSettings = {
-        theme: 'light',
-        fontSize: 'medium',
-        reducedMotion: false,
-        highContrast: false,
-        screenReaderVerbosity: 'standard',
-        enhancedKeyboard: true,
-        routineColors: {
-          morning: '#4F46E5',
-          afternoon: '#059669',
-          evening: '#7C3AED',
-          health: '#DC2626',
-          work: '#D97706',
-          personal: '#0891B2'
-        },
-        completionColors: {
-          completed: '#059669',
-          pending: '#D97706',
-          overdue: '#DC2626',
-          snoozed: '#7C3AED'
-        },
-        uiColors: {
-          primary: '#4F46E5',
-          secondary: '#7C3AED',
-          accent: '#10B981',
-          warning: '#D97706'
-        },
-        routineReminders: true,
-        taskDeadlines: true,
-        achievements: true,
-        messages: true,
-        systemUpdates: false,
-        visualAlerts: true,
-        audioAlerts: true,
-        vibrationAlerts: true,
-        soundVolume: 50,
-        escalationPattern: 'gentle',
-        quietHours: {
-          enabled: false,
-          start: '22:00',
-          end: '07:00'
-        },
-        timeZone: 'America/New_York'
+      const { profileName, profileEmail, profilePhone, emergencyContact, emergencyPhone, ...rest } = DEFAULT_SETTINGS;
+      const newSettings = {
+        ...settings,
+        ...rest,
+        profileName: settings.profileName,
+        profileEmail: settings.profileEmail,
+        profilePhone: settings.profilePhone,
+        emergencyContact: settings.emergencyContact,
+        emergencyPhone: settings.emergencyPhone
       };
-      
-      setSettings(prev => ({ ...prev, ...defaultSettings }));
+      setSettings(newSettings);
+      updateThemeSettings(newSettings);
       setHasUnsavedChanges(true);
     }
   };
@@ -308,6 +264,7 @@ const SettingsAccessibilityPage = () => {
           />
 
           <AccountSection
+            user={authUser}
             settings={settings}
             onSettingChange={handleSettingChange}
             isExpanded={expandedSections.account}
@@ -399,41 +356,6 @@ const SettingsAccessibilityPage = () => {
         aria-live="polite"
         aria-atomic="true"
       />
-
-      {/* Custom CSS for accessibility features */}
-      <style jsx global>{`
-        .reduce-motion *,
-        .reduce-motion *::before,
-        .reduce-motion *::after {
-          animation-duration: 0.01ms !important;
-          animation-iteration-count: 1 !important;
-          transition-duration: 0.01ms !important;
-          scroll-behavior: auto !important;
-        }
-
-        .high-contrast {
-          --color-text-primary: #000000;
-          --color-text-secondary: #000000;
-          --color-border: #000000;
-          --color-primary: #0000FF;
-          --color-error: #FF0000;
-          --color-success: #008000;
-        }
-
-        .high-contrast.dark {
-          --color-text-primary: #FFFFFF;
-          --color-text-secondary: #FFFFFF;
-          --color-border: #FFFFFF;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          * {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };

@@ -122,7 +122,8 @@ exports.downloadWeeklyReport = async (req, res) => {
 
 exports.getAllWeeklyReports = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    const userRoleName = req.user?.role?.name || req.userRole;
+    if (userRoleName !== 'admin') {
       return res.status(403).json({ error: 'Only admins can view all reports' });
     }
 
@@ -185,7 +186,8 @@ exports.getAllWeeklyReports = async (req, res) => {
 
 exports.downloadAllWeeklyReports = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    const userRoleName = req.user?.role?.name || req.userRole;
+    if (userRoleName !== 'admin') {
       return res.status(403).json({ error: 'Only admins can download reports' });
     }
 

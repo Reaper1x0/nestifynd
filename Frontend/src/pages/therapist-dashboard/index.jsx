@@ -6,84 +6,54 @@ import Header from '../../components/ui/Header';
 import TabNavigation from '../../components/ui/TabNavigation';
 import ClientSidebar from './components/ClientSidebar';
 import ClientOverviewGrid from './components/ClientOverviewGrid';
+import AddClientModal from './components/AddClientModal';
+import ClientSettingsModal from './components/ClientSettingsModal';
 import ProgressCharts from './components/ProgressCharts';
 import AlertSystem from './components/AlertSystem';
 import MessagingIntegration from './components/MessagingIntegration';
+import ClientRoutinesManager from './components/ClientRoutinesManager';
+import axiosClient from '../../api/axiosClient';
+import { useAuth } from '../../contexts/AuthContext';
 
 const TherapistDashboard = () => {
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const [selectedClient, setSelectedClient] = useState(null);
   const [activeView, setActiveView] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [clients, setClients] = useState([]);
+  const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [showClientSettingsModal, setShowClientSettingsModal] = useState(false);
   const [accessibilitySettings, setAccessibilitySettings] = useState({
     reducedMotion: false,
     highContrast: false,
     fontSize: 'medium'
   });
 
-  // Mock clients data
-  const [clients] = useState([
-    {
-      id: 'client-001',
-      name: 'Sarah Johnson',
-      completionRate: 85,
-      currentStreak: 12,
-      missedRoutines: 2,
-      lastActivity: new Date(Date.now() - 3600000),
-      status: 'excellent',
-      unreadMessages: 1,
-      routines: ['Morning Routine', 'Work Focus', 'Evening Wind-down'],
-      goals: ['Improve sleep schedule', 'Reduce anxiety', 'Build consistent habits']
-    },
-    {
-      id: 'client-002',
-      name: 'Michael Chen',
-      completionRate: 45,
-      currentStreak: 0,
-      missedRoutines: 8,
-      lastActivity: new Date(Date.now() - 172800000),
-      status: 'needs-attention',
-      unreadMessages: 3,
-      routines: ['ADHD Management', 'Study Schedule', 'Exercise'],
-      goals: ['Focus improvement', 'Time management', 'Stress reduction']
-    },
-    {
-      id: 'client-003',
-      name: 'Emma Rodriguez',
-      completionRate: 72,
-      currentStreak: 5,
-      missedRoutines: 3,
-      lastActivity: new Date(Date.now() - 7200000),
-      status: 'active',
-      unreadMessages: 0,
-      routines: ['Sensory Breaks', 'Social Skills', 'Daily Structure'],
-      goals: ['Social interaction', 'Sensory regulation', 'Independence']
-    },
-    {
-      id: 'client-004',
-      name: 'David Kim',
-      completionRate: 92,
-      currentStreak: 18,
-      missedRoutines: 1,
-      lastActivity: new Date(Date.now() - 1800000),
-      status: 'excellent',
-      unreadMessages: 2,
-      routines: ['Executive Function', 'Organization', 'Communication'],
-      goals: ['Task completion', 'Organization skills', 'Self-advocacy']
-    },
-    {
-      id: 'client-005',
-      name: 'Lisa Thompson',
-      completionRate: 38,
-      currentStreak: 1,
-      missedRoutines: 12,
-      lastActivity: new Date(Date.now() - 259200000),
-      status: 'needs-attention',
-      unreadMessages: 5,
-      routines: ['Anxiety Management', 'Sleep Hygiene', 'Mindfulness'],
-      goals: ['Anxiety reduction', 'Better sleep', 'Emotional regulation']
+  const loadClients = async () => {
+    try {
+      const { data } = await axiosClient.get('/api/therapists/clients/reports');
+      const list = (data.reports || []).map((r) => ({
+          id: (r.clientId && r.clientId.toString) ? r.clientId.toString() : r.clientId,
+          name: r.name,
+          completionRate: r.completionRate ?? 0,
+          currentStreak: r.streak ?? 0,
+          missedRoutines: r.missedRoutines ?? 0,
+          lastActivity: (r.lastActivity || r.lastLogin) ? new Date(r.lastActivity || r.lastLogin) : null,
+          status: r.status || 'active',
+          unreadMessages: r.unreadMessages ?? 0,
+          routines: [],
+          goals: [],
+        }));
+      setClients(list);
+    } catch (e) {
+      setClients([]);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    loadClients();
+  }, []);
 
   // Load accessibility preferences
   useEffect(() => {
@@ -108,6 +78,8 @@ const TherapistDashboard = () => {
     }));
   }, []);
 
+  const isTherapist = authUser?.role === 'therapist';
+
   const handleClientSelect = (client) => {
     setSelectedClient(client);
     // Auto-switch to analytics view when client is selected on mobile
@@ -119,15 +91,16 @@ const TherapistDashboard = () => {
   const viewOptions = [
     { id: 'overview', label: 'Overview', icon: 'Grid3x3' },
     { id: 'analytics', label: 'Analytics', icon: 'BarChart3' },
+    { id: 'routines', label: 'Routines', icon: 'Calendar' },
     { id: 'alerts', label: 'Alerts', icon: 'Bell' },
     { id: 'messages', label: 'Messages', icon: 'MessageCircle' }
   ];
 
   const getOverviewStats = () => {
     const totalClients = clients.length;
-    const avgCompletion = Math.round(
-      clients.reduce((sum, client) => sum + client.completionRate, 0) / totalClients
-    );
+    const avgCompletion = totalClients > 0
+      ? Math.round(clients.reduce((sum, client) => sum + client.completionRate, 0) / totalClients)
+      : 0;
     const needsAttention = clients.filter(c => c.status === 'needs-attention').length;
     const totalUnread = clients.reduce((sum, client) => sum + client.unreadMessages, 0);
     
@@ -144,6 +117,7 @@ const TherapistDashboard = () => {
             clients={clients}
             onClientSelect={handleClientSelect}
             selectedClient={selectedClient}
+            onAddClient={isTherapist ? () => setShowAddClientModal(true) : undefined}
             accessibilitySettings={accessibilitySettings}
           />
         );
@@ -151,6 +125,20 @@ const TherapistDashboard = () => {
         return (
           <ProgressCharts
             selectedClient={selectedClient}
+            accessibilitySettings={accessibilitySettings}
+          />
+        );
+      case 'routines':
+        return (
+          <ClientRoutinesManager
+            clientId={selectedClient?.id}
+            clientName={selectedClient?.name}
+            onNavigateToBuilder={({ clientId: cid, routineId }) => {
+              const params = new URLSearchParams();
+              if (cid) params.set('clientId', cid);
+              if (routineId) params.set('edit', routineId);
+              navigate(`/routine-builder?${params.toString()}`);
+            }}
             accessibilitySettings={accessibilitySettings}
           />
         );
@@ -179,7 +167,7 @@ const TherapistDashboard = () => {
       <Header />
       <TabNavigation />
       
-      <main id="main-content" className="flex h-screen pt-32 md:pt-24">
+      <main id="main-content" className="flex h-screen pt-[1rem]">
         {/* Sidebar */}
         <div className={`
           hidden lg:block transition-all duration-300
@@ -190,6 +178,8 @@ const TherapistDashboard = () => {
             clients={clients}
             selectedClient={selectedClient}
             onClientSelect={handleClientSelect}
+            onAddClient={isTherapist ? () => setShowAddClientModal(true) : undefined}
+            onClientSettings={isTherapist ? () => setShowClientSettingsModal(true) : undefined}
             accessibilitySettings={accessibilitySettings}
           />
         </div>
@@ -197,10 +187,10 @@ const TherapistDashboard = () => {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Dashboard Header */}
-          <div className="bg-surface border-b border-border p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+          <div className="bg-surface border-b border-border px-4 py-3 md:px-5">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold text-text-primary mb-2">
+                <h1 className="text-2xl font-bold text-text-primary mb-0.5">
                   Therapist Dashboard
                 </h1>
                 <p className="text-text-secondary">
@@ -209,8 +199,8 @@ const TherapistDashboard = () => {
               </div>
               
               {/* Quick Stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4 lg:mt-0">
-                <div className="text-center p-3 bg-surface-secondary rounded-lg">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="text-center p-2.5 bg-surface-secondary rounded-lg">
                   <div className="text-xl font-bold text-text-primary">
                     {stats.totalClients}
                   </div>
@@ -218,7 +208,7 @@ const TherapistDashboard = () => {
                     Total Clients
                   </div>
                 </div>
-                <div className="text-center p-3 bg-surface-secondary rounded-lg">
+                <div className="text-center p-2.5 bg-surface-secondary rounded-lg">
                   <div className="text-xl font-bold text-text-primary">
                     {stats.avgCompletion}%
                   </div>
@@ -226,7 +216,7 @@ const TherapistDashboard = () => {
                     Avg Completion
                   </div>
                 </div>
-                <div className="text-center p-3 bg-surface-secondary rounded-lg">
+                <div className="text-center p-2.5 bg-surface-secondary rounded-lg">
                   <div className="text-xl font-bold text-warning">
                     {stats.needsAttention}
                   </div>
@@ -234,7 +224,7 @@ const TherapistDashboard = () => {
                     Need Attention
                   </div>
                 </div>
-                <div className="text-center p-3 bg-surface-secondary rounded-lg">
+                <div className="text-center p-2.5 bg-surface-secondary rounded-lg">
                   <div className="text-xl font-bold text-primary">
                     {stats.totalUnread}
                   </div>
@@ -247,7 +237,7 @@ const TherapistDashboard = () => {
           </div>
 
           {/* View Navigation */}
-          <div className="bg-surface border-b border-border px-6 py-3">
+          <div className="bg-surface border-b border-border px-4 md:px-5 py-1.5">
             <div className="flex flex-wrap gap-2">
               {viewOptions.map((view) => (
                 <Button
@@ -275,7 +265,7 @@ const TherapistDashboard = () => {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-auto p-6">
+          <div className="flex-1 overflow-auto p-4 md:p-5 min-h-0">
             {renderMainContent()}
           </div>
         </div>
@@ -294,6 +284,18 @@ const TherapistDashboard = () => {
           aria-label="Select client"
         />
       </div>
+
+      <AddClientModal
+        isOpen={showAddClientModal}
+        onClose={() => setShowAddClientModal(false)}
+        onClientAdded={loadClients}
+      />
+      <ClientSettingsModal
+        isOpen={showClientSettingsModal && !!selectedClient}
+        clientId={selectedClient?.id}
+        clientName={selectedClient?.name}
+        onClose={() => setShowClientSettingsModal(false)}
+      />
 
       {/* Accessibility Announcements */}
       <div 

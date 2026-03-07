@@ -41,7 +41,7 @@ const Button = React.forwardRef(({
         circle: 'rounded-full aspect-square',
     };
 
-    // Variant classes
+    // Variant classes (ensure default text is always visible, not only on hover)
     const variantClasses = {
         primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
@@ -50,9 +50,9 @@ const Button = React.forwardRef(({
         warning: 'bg-warning text-primary-foreground hover:bg-opacity-90 active:bg-opacity-100 disabled:opacity-50',
         info: 'bg-accent text-white hover:bg-opacity-90 active:bg-opacity-100 disabled:opacity-50',
         ghost: 'bg-transparent text-text-primary hover:bg-primary hover:text-primary-foreground',
-        link: 'bg-transparent text-primary-foreground underline hover:text-primary-600 p-0',
-        outline: 'border border-input bg-background hover:bg-primary hover:text-primary-foreground',
-        text: 'bg-transparent text-primary-foreground hover:bg-surface hover:bg-opacity-50 active:bg-surface active:bg-opacity-70',
+        link: 'bg-transparent text-primary underline hover:text-primary-600 p-0',
+        outline: 'border border-input bg-background text-text-primary hover:bg-primary hover:text-primary-foreground',
+        text: 'bg-transparent text-text-primary hover:bg-surface hover:bg-opacity-50 active:bg-surface active:bg-opacity-70',
     };
 
 

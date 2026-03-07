@@ -8,6 +8,7 @@ import AuthToggle from './components/AuthToggle';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
 import LoadingSpinner from './components/LoadingSpinner';
+import axiosClient from '../../api/axiosClient';
 
 const LoginRegistration = () => {
   const navigate = useNavigate();
@@ -23,21 +24,12 @@ const LoginRegistration = () => {
     theme: 'light'
   });
 
-  // Mock credentials for testing
-  const mockCredentials = {
-    user: {
-      email: "user@nestifynd.com",
-      password: "UserPass123"
-    },
-    therapist: {
-      email: "therapist@nestifynd.com", 
-      password: "TherapistPass123"
-    }
-  };
-
   // Redirect to role-based dashboard if already authenticated
   if (isAuthenticated && user) {
-    const dashboardPath = user.role === 'therapist' ? '/therapist-dashboard' : '/home-dashboard';
+    const roleName = user.role?.name || user.role || 'user';
+    const dashboardPath = roleName === 'therapist' ? '/therapist-dashboard' 
+      : roleName === 'caregiver' ? '/caregiver-dashboard' 
+      : '/home-dashboard';
     return <Navigate to={dashboardPath} replace />;
   }
 
@@ -76,28 +68,20 @@ const LoginRegistration = () => {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Check mock credentials
-      const isValidUser = formData.email === mockCredentials.user.email && 
-                         formData.password === mockCredentials.user.password;
-      const isValidTherapist = formData.email === mockCredentials.therapist.email && 
-                              formData.password === mockCredentials.therapist.password;
-
-      if (isValidUser) {
-        login({ email: formData.email, role: 'user' });
-        setUserRole('user');
-        navigate('/home-dashboard', { replace: true });
-      } else if (isValidTherapist) {
-        login({ email: formData.email, role: 'therapist' });
-        setUserRole('therapist');
-        navigate('/therapist-dashboard', { replace: true });
-      } else {
-        setError(`Invalid credentials. Try:\nUser: ${mockCredentials.user.email} / ${mockCredentials.user.password}\nTherapist: ${mockCredentials.therapist.email} / ${mockCredentials.therapist.password}`);
-      }
+      const { data } = await axiosClient.post('/api/auth/login', {
+        email: formData.email,
+        password: formData.password,
+      });
+      const roleName = data.user?.role?.name || data.user?.role || 'user';
+      login({ user: data.user, token: data.token });
+      setUserRole(['therapist', 'caregiver'].includes(roleName) ? roleName : 'user');
+      const dashboardPath = roleName === 'therapist' ? '/therapist-dashboard' 
+        : roleName === 'caregiver' ? '/caregiver-dashboard' 
+        : '/home-dashboard';
+      navigate(dashboardPath, { replace: true });
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      const msg = err.response?.data?.msg || err.response?.data?.message || 'Invalid credentials. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -108,18 +92,25 @@ const LoginRegistration = () => {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Mock successful registration (users always register as role 'user')
-      login({ email: formData.email, name: formData.name, role: 'user' });
-      setUserRole('user');
+      const { data } = await axiosClient.post('/api/auth/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role || 'user',
+      });
       if (formData.caregiverEmail) {
         localStorage.setItem('caregiverEmail', formData.caregiverEmail);
       }
-      navigate('/home-dashboard', { replace: true });
+      const roleName = data.user?.role?.name || data.user?.role || formData.role || 'user';
+      login({ user: data.user, token: data.token });
+      setUserRole(['therapist', 'caregiver'].includes(roleName) ? roleName : 'user');
+      const dashboardPath = roleName === 'therapist' ? '/therapist-dashboard' 
+        : roleName === 'caregiver' ? '/caregiver-dashboard' 
+        : '/home-dashboard';
+      navigate(dashboardPath, { replace: true });
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      const msg = err.response?.data?.msg || err.response?.data?.message || 'Registration failed. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -227,28 +218,12 @@ const LoginRegistration = () => {
           </div>
         </div>
 
-        {/* Demo Credentials Info */}
+        {/* Help text */}
         <div className="bg-surface rounded-xl shadow-md border border-border p-4">
-          <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-            <Icon name="Info" size={18} className="text-primary" aria-hidden />
-            Demo Credentials
-          </h3>
-          <div className="grid gap-3 text-sm">
-            <div className="bg-surface-secondary rounded-lg p-3 border border-border">
-              <p className="font-medium text-text-primary mb-1">User account</p>
-              <p className="text-text-secondary text-xs font-mono break-all">
-                {mockCredentials.user.email}
-              </p>
-              <p className="text-text-tertiary text-xs mt-0.5">Password: {mockCredentials.user.password}</p>
-            </div>
-            <div className="bg-surface-secondary rounded-lg p-3 border border-border">
-              <p className="font-medium text-text-primary mb-1">Therapist account</p>
-              <p className="text-text-secondary text-xs font-mono break-all">
-                {mockCredentials.therapist.email}
-              </p>
-              <p className="text-text-tertiary text-xs mt-0.5">Password: {mockCredentials.therapist.password}</p>
-            </div>
-          </div>
+          <p className="text-sm text-text-secondary flex items-center gap-2">
+            <Icon name="Info" size={18} className="text-primary shrink-0" aria-hidden />
+            Create an account to get started. Choose your role during registration — User, Therapist, or Caregiver.
+          </p>
         </div>
       </div>
 

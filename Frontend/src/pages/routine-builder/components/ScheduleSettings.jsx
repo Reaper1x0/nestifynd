@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Input from '../../../components/ui/Input';
 
@@ -21,6 +21,20 @@ const ScheduleSettings = ({
     timeFlexibility: formData.timeFlexibility || 15,
     autoReschedule: formData.autoReschedule || false
   });
+
+  // Sync with parent formData when it changes (e.g., from AI routine or template)
+  useEffect(() => {
+    setLocalData({
+      frequency: formData.frequency || 'daily',
+      time: formData.time || '09:00',
+      duration: formData.duration || 30,
+      daysOfWeek: formData.daysOfWeek || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      startDate: formData.startDate || new Date().toISOString().split('T')[0],
+      endDate: formData.endDate || '',
+      timeFlexibility: formData.timeFlexibility || 15,
+      autoReschedule: formData.autoReschedule || false
+    });
+  }, [formData.frequency, formData.time, formData.duration, formData.daysOfWeek, formData.startDate, formData.endDate, formData.timeFlexibility, formData.autoReschedule]);
 
   const frequencyOptions = [
     { id: 'daily', name: 'Daily', icon: 'Calendar', description: 'Every day' },

@@ -8,11 +8,11 @@ const AppearanceSection = ({
   isExpanded, 
   onToggleExpanded 
 }) => {
-  const [selectedColorCategory, setSelectedColorCategory] = useState('routines');
+  const [selectedColorCategory, setSelectedColorCategory] = useState('routine');
 
   const colorCategories = [
     { 
-      id: 'routines', 
+      id: 'routine', 
       label: 'Routine Categories', 
       description: 'Colors for different routine types',
       colors: settings.routineColors || {

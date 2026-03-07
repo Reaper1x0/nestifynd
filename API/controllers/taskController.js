@@ -2,8 +2,11 @@
 const Task = require('../models/Task');
 const Routine = require('../models/Routine');
 const Activity = require('../models/UserActivity');
+const calculateStreak = require('../utils/streakCalculator');
+const unlockBadges = require('../utils/badgeUnlocker');
 const UserAssignment = require('../models/UserAssignment');
 const User = require('../models/User');
+const { sendEmail } = require('../utils/emailService');
 
 /**
  * @swagger
@@ -26,10 +29,18 @@ const User = require('../models/User');
 exports.getAll = async (req, res) => {
   try {
     const userId = req.user._id;
-    
-    // Get tasks for user's active routine only
-    const tasks = await Task.getTasksForActiveRoutine(userId);
-    
+    const routineId = req.query.routine;
+
+    let tasks;
+    if (routineId) {
+      tasks = await Task.find({ user: userId, routine: routineId }).sort({ order: 1, scheduledTime: 1 });
+    } else {
+      tasks = await Task.getTasksForActiveRoutine(userId);
+    }
+
+    // Clear expired snoozes so tasks show correct state after snooze period
+    await Promise.all(tasks.map((t) => t.clearExpiredSnooze()));
+
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -319,15 +330,18 @@ exports.delete = async (req, res) => {
 exports.toggleTaskComplete = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user._id;
-    
+    const currentUserId = req.user._id;
+    const isAdmin = req.user.role?.name === 'admin';
+
     const task = await Task.findById(id).populate('routine');
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
-    // Check if task belongs to user
-    if (!task.user.equals(userId)) {
+    // Admin can act on any task; otherwise task must belong to user
+    if (!isAdmin && !task.user.equals(currentUserId)) {
       return res.status(403).json({ error: 'Unauthorized to update this task' });
     }
+
+    const taskOwnerId = task.user._id || task.user;
 
     // Check if task's routine is active
     if (!task.routine || !task.routine.isActive) {
@@ -336,12 +350,20 @@ exports.toggleTaskComplete = async (req, res) => {
 
     // Use the new model method
     await task.markCompleted();
-    
-    // Log activity
+
+    // Update streak and unlock badges for the task owner (not admin)
+    try {
+      await calculateStreak(taskOwnerId);
+      await unlockBadges(taskOwnerId);
+    } catch (e) {
+      console.error('Streak/badge update error:', e);
+    }
+
+    // Log activity for task owner
     await Activity.logActivity(
-      userId,
+      taskOwnerId,
       `Task completed: ${task.name}`,
-      `Task "${task.name}" was marked as completed`,
+      isAdmin ? `Task "${task.name}" was marked completed by admin` : `Task "${task.name}" was marked as completed`,
       'task_completed',
       { taskId: task._id, routineId: task.routine._id }
     );
@@ -388,16 +410,19 @@ exports.toggleTaskComplete = async (req, res) => {
 exports.snoozeTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user._id;
+    const currentUserId = req.user._id;
+    const isAdmin = req.user.role?.name === 'admin';
     const { minutes = 5 } = req.body;
-    
+
     const task = await Task.findById(id).populate('routine');
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
-    // Check if task belongs to user
-    if (!task.user.equals(userId)) {
+    // Admin can act on any task; otherwise task must belong to user
+    if (!isAdmin && !task.user.equals(currentUserId)) {
       return res.status(403).json({ error: 'Unauthorized to snooze this task' });
     }
+
+    const taskOwnerId = task.user._id || task.user;
 
     // Check if task's routine is active
     if (!task.routine || !task.routine.isActive) {
@@ -405,18 +430,29 @@ exports.snoozeTask = async (req, res) => {
     }
 
     // Check if task allows snoozing
-    if (!task.settings.allowSnooze) {
+    const settings = task.settings || {};
+    if (settings.allowSnooze === false) {
       return res.status(403).json({ error: 'Task does not allow snoozing' });
+    }
+
+    // Already snoozed - do not re-snooze or log new activity
+    const now = new Date();
+    if (task.isSnoozed && task.snoozedUntil && task.snoozedUntil > now) {
+      return res.json({
+        message: 'Task is already snoozed',
+        task,
+        snoozedUntil: task.snoozedUntil
+      });
     }
 
     // Use the new model method
     await task.snooze(minutes);
-    
-    // Log activity
+
+    // Log activity for task owner (only when actually snoozing)
     await Activity.logActivity(
-      userId,
+      taskOwnerId,
       `Task snoozed: ${task.name}`,
-      `Task "${task.name}" was snoozed for ${minutes} minutes`,
+      isAdmin ? `Task "${task.name}" was snoozed for ${minutes} minutes by admin` : `Task "${task.name}" was snoozed for ${minutes} minutes`,
       'task_snoozed',
       { taskId: task._id, routineId: task.routine._id, snoozeMinutes: minutes }
     );
@@ -467,15 +503,18 @@ exports.snoozeTask = async (req, res) => {
 exports.dismissTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user._id;
-    
+    const currentUserId = req.user._id;
+    const isAdmin = req.user.role?.name === 'admin';
+
     const task = await Task.findById(id).populate('routine');
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
-    // Check if task belongs to user
-    if (!task.user.equals(userId)) {
+    // Admin can act on any task; otherwise task must belong to user
+    if (!isAdmin && !task.user.equals(currentUserId)) {
       return res.status(403).json({ error: 'Unauthorized to dismiss this task' });
     }
+
+    const taskOwnerId = task.user._id || task.user;
 
     // Check if task's routine is active
     if (!task.routine || !task.routine.isActive) {
@@ -483,41 +522,57 @@ exports.dismissTask = async (req, res) => {
     }
 
     // Check if task allows dismissing
-    if (!task.settings.allowDismiss) {
+    const settings = task.settings || {};
+    if (settings.allowDismiss === false) {
       return res.status(403).json({ error: 'Task does not allow dismissing' });
     }
 
     // Use the new model method
     await task.dismiss();
-    
-    // Log activity for user
+
+    // Log activity for task owner
     await Activity.logActivity(
-      userId,
+      taskOwnerId,
       `Task dismissed: ${task.name}`,
-      `Task "${task.name}" was dismissed`,
+      isAdmin ? `Task "${task.name}" was dismissed by admin` : `Task "${task.name}" was dismissed`,
       'task_dismissed',
       { taskId: task._id, routineId: task.routine._id }
     );
 
-    // Notify caregivers
-    const caregivers = await UserAssignment.getCaregivers(userId);
+    // Notify caregivers of the task owner (activity log + email)
+    const caregivers = await UserAssignment.getCaregivers(taskOwnerId);
+    const taskOwner = await User.findById(taskOwnerId).select('name email').lean();
+    const userName = taskOwner?.name || taskOwner?.email || 'User';
     
     for (const assignment of caregivers) {
       if (assignment.relatedUserId && assignment.permissions.canReceiveNotifications) {
+        // Log activity for caregiver
         await Activity.logActivity(
           assignment.relatedUserId._id,
-          `User ${req.user.name || req.user.email} dismissed task: ${task.name}`,
+          `User ${userName} dismissed task: ${task.name}`,
           `Task "${task.name}" was dismissed by user`,
           'task_dismissed',
-          { taskId: task._id, userId: userId, dismissedBy: req.user.name || req.user.email }
+          { taskId: task._id, userId: userId, dismissedBy: userName }
         );
+        
+        // Send email notification to caregiver (mock service - console output)
+        const caregiverEmail = assignment.relatedUserId.email;
+        const caregiverName = assignment.relatedUserId.name || 'Caregiver';
+        if (caregiverEmail) {
+          await sendEmail(
+            caregiverEmail,
+            `Task Dismissed Alert - ${userName}`,
+            `Hi ${caregiverName},\n\nThis is to notify you that ${userName} has dismissed the following task:\n\nTask: "${task.name}"\nRoutine: "${task.routine.title}"\nDismissed at: ${new Date().toLocaleString()}\n\nYou may want to follow up with them.\n\nBest regards,\nNestifyND Team`
+          );
+        }
       }
     }
 
     res.json({ 
       message: 'Task dismissed and caregivers notified',
       task,
-      dismissedAt: task.dismissedAt
+      dismissedAt: task.dismissedAt,
+      caregiversNotified: caregivers.filter(a => a.permissions?.canReceiveNotifications).length
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

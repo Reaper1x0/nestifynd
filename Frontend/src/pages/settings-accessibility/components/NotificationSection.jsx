@@ -17,35 +17,42 @@ const NotificationSection = ({
       label: 'Routine Reminders',
       description: 'Notifications for upcoming routines',
       icon: 'Clock',
-      enabled: settings.routineReminders || true
+      enabled: settings.routineReminders !== undefined ? settings.routineReminders : true
     },
     {
       id: 'taskDeadlines',
       label: 'Task Deadlines',
       description: 'Alerts for overdue tasks',
       icon: 'AlertCircle',
-      enabled: settings.taskDeadlines || true
+      enabled: settings.taskDeadlines !== undefined ? settings.taskDeadlines : true
     },
     {
       id: 'achievements',
       label: 'Achievements',
       description: 'Celebration of completed goals',
       icon: 'Trophy',
-      enabled: settings.achievements || true
+      enabled: settings.achievements !== undefined ? settings.achievements : true
     },
     {
       id: 'messages',
       label: 'Messages',
       description: 'New messages from caregivers',
       icon: 'MessageCircle',
-      enabled: settings.messages || true
+      enabled: settings.messages !== undefined ? settings.messages : true
     },
     {
       id: 'systemUpdates',
       label: 'System Updates',
       description: 'App updates and maintenance',
       icon: 'Settings',
-      enabled: settings.systemUpdates || false
+      enabled: settings.systemUpdates !== undefined ? settings.systemUpdates : false
+    },
+    {
+      id: 'motivationalOptIn',
+      label: 'Motivational quotes in reminders',
+      description: 'Include a short motivational quote with reminder notifications (when enabled by admin)',
+      icon: 'Sparkles',
+      enabled: settings.motivationalOptIn !== undefined ? settings.motivationalOptIn : true
     }
   ];
 
@@ -55,21 +62,21 @@ const NotificationSection = ({
       label: 'Visual',
       description: 'On-screen notifications',
       icon: 'Eye',
-      enabled: settings.visualAlerts || true
+      enabled: settings.visualAlerts !== undefined ? settings.visualAlerts : true
     },
     {
       id: 'audio',
       label: 'Audio',
       description: 'Sound notifications',
       icon: 'Volume2',
-      enabled: settings.audioAlerts || true
+      enabled: settings.audioAlerts !== undefined ? settings.audioAlerts : true
     },
     {
       id: 'vibration',
       label: 'Vibration',
       description: 'Device vibration (mobile)',
       icon: 'Smartphone',
-      enabled: settings.vibrationAlerts || true
+      enabled: settings.vibrationAlerts !== undefined ? settings.vibrationAlerts : true
     }
   ];
 
@@ -139,9 +146,9 @@ const NotificationSection = ({
             <div className="space-y-3">
               {notificationTypes.map((type) => (
                 <div key={type.id} className="flex items-center justify-between p-4 bg-surface-secondary rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Icon name={type.icon} size={20} className="text-text-secondary" />
-                    <div>
+                  <div className="flex items-center space-x-3 min-w-0 flex-1 mr-4">
+                    <Icon name={type.icon} size={20} className="text-text-secondary flex-shrink-0" />
+                    <div className="min-w-0">
                       <div className="text-sm font-medium text-text-primary">
                         {type.label}
                       </div>
@@ -153,9 +160,9 @@ const NotificationSection = ({
                   <button
                     onClick={() => handleNotificationToggle(type.id, !type.enabled)}
                     className={`
-                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                      relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors
                       focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                      ${type.enabled ? 'bg-primary' : 'bg-gray-200'}
+                      ${type.enabled ? 'bg-primary' : 'bg-border'}
                     `}
                     role="switch"
                     aria-checked={type.enabled}
@@ -187,13 +194,14 @@ const NotificationSection = ({
                     flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-200
                     focus:outline-none focus:ring-2 focus:ring-primary
                     ${method.enabled
-                      ? 'border-primary bg-primary-50 text-primary' :'border-border hover:border-primary-200 hover:bg-surface-secondary'
+                      ? 'border-primary bg-primary-50'
+                      : 'border-border hover:border-primary-200 hover:bg-surface-secondary'
                     }
                   `}
                   aria-pressed={method.enabled}
                 >
-                  <Icon name={method.icon} size={24} className="mb-2" />
-                  <div className="text-sm font-medium mb-1">{method.label}</div>
+                  <Icon name={method.icon} size={24} className={`mb-2 ${method.enabled ? 'text-primary' : 'text-text-secondary'}`} />
+                  <div className={`text-sm font-medium mb-1 ${method.enabled ? 'text-primary' : 'text-text-primary'}`}>{method.label}</div>
                   <div className="text-xs text-center text-text-secondary">
                     {method.description}
                   </div>
@@ -203,7 +211,7 @@ const NotificationSection = ({
           </div>
 
           {/* Sound Volume */}
-          {settings.audioAlerts && (
+          {(settings.audioAlerts !== undefined ? settings.audioAlerts : true) && (
             <div className="space-y-3">
               <label className="block text-sm font-medium text-text-primary">
                 Sound Volume
@@ -213,28 +221,48 @@ const NotificationSection = ({
                   type="range"
                   min="0"
                   max="100"
-                  value={settings.soundVolume || 50}
+                  value={settings.soundVolume ?? 50}
                   onChange={(e) => handleSoundVolumeChange(e.target.value)}
-                  className="w-full h-2 bg-surface-secondary rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary bg-border focus:outline-none focus:ring-2 focus:ring-primary"
                   aria-label="Sound volume"
                 />
                 <div className="flex justify-between text-xs text-text-secondary">
                   <span>Silent</span>
-                  <span>{settings.soundVolume || 50}%</span>
+                  <span>{settings.soundVolume ?? 50}%</span>
                   <span>Loud</span>
                 </div>
               </div>
               
-              {/* Test Sound Button */}
               <Button
                 variant="outline"
                 onClick={() => {
-                  // Play test sound
-                  const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmHgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
-                  audio.volume = (settings.soundVolume || 50) / 100;
-                  audio.play().catch(() => {
-                    // Handle audio play failure silently
-                  });
+                  try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const vol = (settings.soundVolume ?? 50) / 100;
+                    const gainNode = ctx.createGain();
+                    gainNode.gain.setValueAtTime(vol * 0.3, ctx.currentTime);
+                    gainNode.connect(ctx.destination);
+
+                    const playTone = (freq, start, duration) => {
+                      const osc = ctx.createOscillator();
+                      osc.type = 'sine';
+                      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+                      const env = ctx.createGain();
+                      env.gain.setValueAtTime(0, ctx.currentTime + start);
+                      env.gain.linearRampToValueAtTime(1, ctx.currentTime + start + 0.02);
+                      env.gain.linearRampToValueAtTime(0, ctx.currentTime + start + duration);
+                      osc.connect(env);
+                      env.connect(gainNode);
+                      osc.start(ctx.currentTime + start);
+                      osc.stop(ctx.currentTime + start + duration);
+                    };
+
+                    playTone(523, 0, 0.15);
+                    playTone(659, 0.15, 0.15);
+                    playTone(784, 0.3, 0.25);
+                  } catch (e) {
+                    console.error('Audio playback failed:', e);
+                  }
                 }}
                 iconName="Volume2"
                 iconPosition="left"
@@ -279,8 +307,8 @@ const NotificationSection = ({
 
           {/* Quiet Hours */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between p-4 bg-surface-secondary rounded-lg">
+              <div className="min-w-0 flex-1 mr-4">
                 <label className="block text-sm font-medium text-text-primary">
                   Quiet Hours
                 </label>
@@ -291,9 +319,9 @@ const NotificationSection = ({
               <button
                 onClick={() => handleQuietHoursChange('enabled', !(settings.quietHours?.enabled || false))}
                 className={`
-                  relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                  relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors
                   focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                  ${settings.quietHours?.enabled ? 'bg-primary' : 'bg-gray-200'}
+                  ${settings.quietHours?.enabled ? 'bg-primary' : 'bg-border'}
                 `}
                 role="switch"
                 aria-checked={settings.quietHours?.enabled || false}
@@ -308,7 +336,7 @@ const NotificationSection = ({
             </div>
             
             {settings.quietHours?.enabled && (
-              <div className="grid grid-cols-2 gap-4 mt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-1">
                 <div>
                   <label className="block text-xs font-medium text-text-primary mb-1">
                     Start Time

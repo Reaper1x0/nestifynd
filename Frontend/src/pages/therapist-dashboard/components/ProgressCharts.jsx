@@ -1,64 +1,98 @@
-import React, { useState } from 'react';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import axiosClient from '../../../api/axiosClient';
+import { useAccessibility } from '../../../components/ui/AccessibilityNavWrapper';
 
-const ProgressCharts = ({ 
-  selectedClient, 
-  accessibilitySettings 
-}) => {
-  const [activeChart, setActiveChart] = useState('completion');
-  const [timeRange, setTimeRange] = useState('week');
+/**
+ * Therapist ProgressCharts - Matches client gamification hub ProgressCharts layout exactly.
+ */
+const ProgressCharts = ({ selectedClient }) => {
+  const { getNavigationClasses, effectiveSettings } = useAccessibility();
+  const [selectedChart, setSelectedChart] = useState('weekly');
+  const [selectedTimeframe, setSelectedTimeframe] = useState('7days');
+  const [progressData, setProgressData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  // Mock chart data - in real app this would come from API
-  const completionData = [
-    { day: 'Mon', completed: 8, total: 10, percentage: 80 },
-    { day: 'Tue', completed: 9, total: 10, percentage: 90 },
-    { day: 'Wed', completed: 7, total: 10, percentage: 70 },
-    { day: 'Thu', completed: 10, total: 10, percentage: 100 },
-    { day: 'Fri', completed: 6, total: 10, percentage: 60 },
-    { day: 'Sat', completed: 8, total: 10, percentage: 80 },
-    { day: 'Sun', completed: 9, total: 10, percentage: 90 }
-  ];
+  const timeRangeMap = { '7days': '7d', '30days': '30d', '90days': '90d' };
+  const apiRange = timeRangeMap[selectedTimeframe] || '7d';
 
-  const streakData = [
-    { week: 'Week 1', streak: 5 },
-    { week: 'Week 2', streak: 7 },
-    { week: 'Week 3', streak: 3 },
-    { week: 'Week 4', streak: 12 },
-    { week: 'Week 5', streak: 8 },
-    { week: 'Week 6', streak: 15 }
-  ];
+  useEffect(() => {
+    if (!selectedClient?.id) {
+      setProgressData(null);
+      return;
+    }
+    setLoading(true);
+    axiosClient
+      .get(`/api/therapists/clients/${selectedClient.id}/progress?range=${apiRange}`)
+      .then(({ data }) => setProgressData(data))
+      .catch(() => setProgressData(null))
+      .finally(() => setLoading(false));
+  }, [selectedClient?.id, apiRange]);
 
-  const routineBreakdown = [
-    { name: 'Morning Routine', value: 35, color: '#4F46E5' },
-    { name: 'Work Tasks', value: 25, color: '#7C3AED' },
-    { name: 'Exercise', value: 20, color: '#10B981' },
-    { name: 'Evening Routine', value: 15, color: '#F59E0B' },
-    { name: 'Self Care', value: 5, color: '#EF4444' }
-  ];
+  const weeklyData = progressData?.weeklyChartData ?? [];
+  const categoryData = progressData?.categoryData ?? [];
+  const currentStreak = progressData?.streak?.currentStreak ?? 0;
+  const totalPoints = progressData?.totalPointsEarned ?? 0;
+
+  const streakChartData = (() => {
+    const cal = progressData?.streakCalendar ?? {};
+    const dates = Object.keys(cal).filter(d => cal[d] === 'complete').sort();
+    if (dates.length === 0) return [];
+    const result = [];
+    let streak = 0;
+    const oneDay = 24 * 60 * 60 * 1000;
+    for (let i = 0; i < dates.length; i++) {
+      const prev = i > 0 ? new Date(dates[i - 1]).getTime() : 0;
+      const curr = new Date(dates[i]).getTime();
+      if (i === 0 || curr - prev > oneDay + 1) streak = 1;
+      else streak++;
+      const d = new Date(dates[i]);
+      result.push({ date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), streak });
+    }
+    const limit = apiRange === '7d' ? 7 : apiRange === '30d' ? 14 : 30;
+    return result.slice(-limit);
+  })();
 
   const chartTypes = [
-    { id: 'completion', label: 'Daily Completion', icon: 'BarChart3' },
+    { id: 'weekly', label: 'Weekly Progress', icon: 'BarChart3' },
     { id: 'streak', label: 'Streak Trends', icon: 'TrendingUp' },
-    { id: 'breakdown', label: 'Routine Breakdown', icon: 'PieChart' }
+    { id: 'categories', label: 'Task Categories', icon: 'PieChart' }
   ];
 
-  const timeRanges = [
-    { value: 'week', label: 'This Week' },
-    { value: 'month', label: 'This Month' },
-    { value: 'quarter', label: 'Last 3 Months' }
+  const timeframes = [
+    { id: '7days', label: '7 Days' },
+    { id: '30days', label: '30 Days' },
+    { id: '90days', label: '90 Days' }
+  ];
+
+  const chartColors = {
+    primary: effectiveSettings?.highContrast ? '#0000FF' : '#4F46E5',
+    success: effectiveSettings?.highContrast ? '#008000' : '#10B981',
+    warning: effectiveSettings?.highContrast ? '#FF8C00' : '#F59E0B',
+    error: effectiveSettings?.highContrast ? '#FF0000' : '#EF4444',
+    secondary: effectiveSettings?.highContrast ? '#800080' : '#8B5CF6'
+  };
+
+  const pieColors = [
+    chartColors.primary,
+    chartColors.success,
+    chartColors.warning,
+    chartColors.error,
+    chartColors.secondary
   ];
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-surface border border-border rounded-lg p-3 shadow-lg">
-          <p className="text-text-primary font-medium">{label}</p>
+          <p className="text-sm font-medium text-text-primary mb-1">{label}</p>
           {payload.map((entry, index) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: {entry.value}
-              {activeChart === 'completion' && '%'}
+            <p key={index} className="text-sm text-text-secondary">
+              <span style={{ color: entry.color }}>{entry.name}: </span>
+              {entry.value}
             </p>
           ))}
         </div>
@@ -67,93 +101,145 @@ const ProgressCharts = ({
     return null;
   };
 
+  const handleExport = () => {
+    if (!progressData || !selectedClient) return;
+    setExporting(true);
+    try {
+      let csv = `Client,${selectedClient.name}\nID,${selectedClient.id}\nRange,${apiRange}\n\n`;
+      if (selectedChart === 'weekly') {
+        csv += 'Day,Completed,Total\n';
+        weeklyData.forEach(row => {
+          csv += `${row.day || row.label},${row.completed ?? 0},${row.total ?? 0}\n`;
+        });
+      } else if (selectedChart === 'streak') {
+        csv += 'Date,Streak Days\n';
+        streakChartData.forEach(row => {
+          csv += `${row.date},${row.streak}\n`;
+        });
+      } else {
+        csv += 'Category,Count\n';
+        categoryData.forEach(row => {
+          csv += `${row.name},${row.value}\n`;
+        });
+      }
+      csv += `\nSummary\nTotal Points,${totalPoints}\nCurrent Streak,${currentStreak}\n`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `progress-${selectedClient.name}-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const tasksCompleted = weeklyData.reduce((sum, d) => sum + (d.completed || 0), 0);
+  const daysActive = apiRange === '7d'
+    ? weeklyData.filter(d => (d.completed || 0) > 0).length
+    : streakChartData.length;
+
+  const completionRate = weeklyData.length > 0
+    ? Math.round((tasksCompleted / Math.max(1, weeklyData.reduce((s, d) => s + (d.total || 1), 0))) * 100)
+    : 0;
+
+  const successRate = selectedChart === 'streak' && currentStreak > 0 ? Math.min(100, currentStreak * 10) : 0;
+
+  const WeeklyChart = () => (
+    <div className="h-64" role="img" aria-label="Weekly progress bar chart">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={weeklyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={effectiveSettings?.highContrast ? '#000000' : '#E5E7EB'} />
+          <XAxis
+            dataKey={apiRange === '7d' ? 'day' : 'label'}
+            stroke={effectiveSettings?.highContrast ? '#000000' : '#6B7280'}
+            fontSize={12}
+          />
+          <YAxis
+            stroke={effectiveSettings?.highContrast ? '#000000' : '#6B7280'}
+            fontSize={12}
+            domain={[0, 'auto']}
+            allowDecimals={false}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Bar dataKey="completed" fill={chartColors.primary} name="Completed Tasks" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+          <Bar dataKey="total" fill={chartColors.success} name="Total Tasks" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  const StreakChart = () => (
+    <div className="h-64" role="img" aria-label="Streak trends line chart">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={streakChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={effectiveSettings?.highContrast ? '#000000' : '#E5E7EB'} />
+          <XAxis
+            dataKey="date"
+            stroke={effectiveSettings?.highContrast ? '#000000' : '#6B7280'}
+            fontSize={12}
+          />
+          <YAxis
+            stroke={effectiveSettings?.highContrast ? '#000000' : '#6B7280'}
+            fontSize={12}
+            domain={[0, 'auto']}
+            allowDecimals={false}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Line
+            type="monotone"
+            dataKey="streak"
+            stroke={chartColors.warning}
+            strokeWidth={3}
+            dot={{ fill: chartColors.warning, strokeWidth: 2, r: 4 }}
+            name="Streak Days"
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  const CategoryChart = () => (
+    <div className="h-64 flex items-center justify-center" role="img" aria-label="Task categories pie chart">
+      {categoryData.length > 0 ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={categoryData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {categoryData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+      ) : (
+        <p className="text-text-secondary text-sm text-center px-4">
+          Complete tasks from routines to see a breakdown by routine category.
+        </p>
+      )}
+    </div>
+  );
+
   const renderChart = () => {
-    const chartProps = {
-      width: '100%',
-      height: 300,
-      margin: { top: 20, right: 30, left: 20, bottom: 5 }
-    };
-
-    switch (activeChart) {
-      case 'completion':
-        return (
-          <ResponsiveContainer {...chartProps}>
-            <BarChart data={completionData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis 
-                dataKey="day" 
-                stroke="var(--color-text-secondary)"
-                fontSize={12}
-              />
-              <YAxis 
-                stroke="var(--color-text-secondary)"
-                fontSize={12}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar 
-                dataKey="percentage" 
-                fill="var(--color-primary)" 
-                name="Completion Rate"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-
+    switch (selectedChart) {
+      case 'weekly':
+        return <WeeklyChart />;
       case 'streak':
-        return (
-          <ResponsiveContainer {...chartProps}>
-            <LineChart data={streakData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis 
-                dataKey="week" 
-                stroke="var(--color-text-secondary)"
-                fontSize={12}
-              />
-              <YAxis 
-                stroke="var(--color-text-secondary)"
-                fontSize={12}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="streak" 
-                stroke="var(--color-success)" 
-                strokeWidth={3}
-                dot={{ fill: 'var(--color-success)', strokeWidth: 2, r: 6 }}
-                name="Streak Days"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        );
-
-      case 'breakdown':
-        return (
-          <ResponsiveContainer {...chartProps}>
-            <PieChart>
-              <Pie
-                data={routineBreakdown}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={120}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {routineBreakdown.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        );
-
+        return <StreakChart />;
+      case 'categories':
+        return <CategoryChart />;
       default:
-        return null;
+        return <WeeklyChart />;
     }
   };
 
@@ -161,137 +247,132 @@ const ProgressCharts = ({
     return (
       <div className="bg-surface rounded-lg border border-border p-8 text-center">
         <Icon name="BarChart3" size={48} className="mx-auto mb-4 text-text-tertiary" />
-        <h3 className="text-lg font-medium text-text-primary mb-2">
-          Select a Client
-        </h3>
-        <p className="text-text-secondary">
-          Choose a client from the list to view their progress charts and analytics.
-        </p>
+        <h3 className="text-lg font-medium text-text-primary mb-2">Select a Client</h3>
+        <p className="text-text-secondary">Choose a client from the list to view their progress charts.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-surface rounded-lg border border-border p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+    <div className="bg-surface border border-border rounded-lg p-4">
+      {/* Header - matches client */}
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-semibold text-text-primary mb-1">
-            Progress Analytics
-          </h2>
-          <p className="text-text-secondary">
-            {selectedClient.name} • ID: {selectedClient.id}
-          </p>
+          <h3 className="text-lg font-semibold text-text-primary">Progress Analytics</h3>
+          <p className="text-text-secondary text-sm mt-0.5">{selectedClient.name} • ID: {String(selectedClient.id).slice(0, 6)}.{String(selectedClient.id).slice(-4)}</p>
         </div>
-        
-        <div className="flex items-center space-x-2 mt-4 sm:mt-0">
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="px-3 py-2 border border-border rounded-lg bg-surface text-text-primary focus:ring-2 focus:ring-primary focus:border-primary text-sm"
-            aria-label="Select time range"
-          >
-            {timeRanges.map(range => (
-              <option key={range.value} value={range.value}>
-                {range.label}
-              </option>
-            ))}
-          </select>
-          
-          <Button
-            variant="outline"
-            iconName="Download"
-            onClick={() => {/* Export functionality */}}
-            aria-label="Export chart data"
-          >
-            Export
-          </Button>
+        <div className="flex items-center space-x-2">
+          <Icon name="BarChart3" size={20} className="text-text-secondary" />
         </div>
       </div>
 
-      {/* Chart Type Selector */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {chartTypes.map((chart) => (
-          <Button
+      {/* Chart Type Selection - matches client */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {chartTypes.map(chart => (
+          <button
             key={chart.id}
-            variant={activeChart === chart.id ? 'primary' : 'outline'}
-            iconName={chart.icon}
-            iconPosition="left"
-            onClick={() => setActiveChart(chart.id)}
-            className="text-sm"
+            onClick={() => setSelectedChart(chart.id)}
+            className={`
+              flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium
+              ${selectedChart === chart.id
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-surface-secondary text-text-secondary hover:text-text-primary'
+              }
+              ${getNavigationClasses('transition-colors duration-200')}
+            `}
+            aria-pressed={selectedChart === chart.id}
           >
-            {chart.label}
-          </Button>
+            <Icon name={chart.icon} size={16} />
+            <span className="hidden sm:inline">{chart.label}</span>
+          </button>
         ))}
       </div>
 
+      {/* Timeframe Selection - matches client (for weekly and streak) */}
+      {(selectedChart === 'weekly' || selectedChart === 'streak') && (
+        <div className="flex items-center space-x-2 mb-4">
+          <span className="text-sm text-text-secondary">Timeframe:</span>
+          <div className="flex space-x-1">
+            {timeframes.map(timeframe => (
+              <button
+                key={timeframe.id}
+                onClick={() => setSelectedTimeframe(timeframe.id)}
+                className={`
+                  px-3 py-1 rounded text-sm font-medium
+                  ${selectedTimeframe === timeframe.id
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-surface-secondary'
+                  }
+                  ${getNavigationClasses('transition-colors duration-200')}
+                `}
+                aria-pressed={selectedTimeframe === timeframe.id}
+              >
+                {timeframe.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Chart Container */}
-      <div className="bg-surface-secondary rounded-lg p-4 mb-6">
-        <div 
-          className="w-full"
-          role="img"
-          aria-label={`${chartTypes.find(c => c.id === activeChart)?.label} chart for ${selectedClient.name}`}
+      <div className="mb-4">
+        {loading ? (
+          <div className="h-64 flex items-center justify-center">
+            <Icon name="Loader2" size={32} className="animate-spin text-primary" />
+          </div>
+        ) : (
+          renderChart()
+        )}
+      </div>
+
+      {/* Chart Summary - matches client exactly */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-text-primary mb-1">
+            {selectedChart === 'weekly' ? tasksCompleted : currentStreak}
+          </div>
+          <div className="text-xs text-text-secondary">
+            {selectedChart === 'weekly' ? 'Tasks Completed' : 'Current Streak'}
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-text-primary mb-1">
+            {selectedChart === 'weekly' && weeklyData.length > 0
+              ? completionRate
+              : selectedChart === 'streak' ? successRate : 0}%
+          </div>
+          <div className="text-xs text-text-secondary">
+            {selectedChart === 'weekly' ? 'Completion Rate' : 'Success Rate'}
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-text-primary mb-1">
+            {selectedChart === 'categories' ? categoryData.length : totalPoints}
+          </div>
+          <div className="text-xs text-text-secondary">
+            {selectedChart === 'categories' ? 'Categories' : 'Total Points'}
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-text-primary mb-1">
+            {selectedChart === 'weekly' ? daysActive : selectedChart === 'streak' ? streakChartData.length : currentStreak}
+          </div>
+          <div className="text-xs text-text-secondary">Days Active</div>
+        </div>
+      </div>
+
+      {/* Export - matches client */}
+      <div className="flex justify-end mt-4 pt-4 border-t border-border">
+        <Button
+          variant="outline"
+          size="sm"
+          iconName="Download"
+          iconPosition="left"
+          onClick={handleExport}
+          disabled={!progressData || exporting}
         >
-          {renderChart()}
-        </div>
-      </div>
-
-      {/* Chart Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-success-50 border border-success-200 rounded-lg p-4">
-          <div className="flex items-center space-x-2 mb-2">
-            <Icon name="TrendingUp" size={20} className="text-success" />
-            <span className="font-medium text-success">Improvement</span>
-          </div>
-          <p className="text-sm text-text-secondary">
-            Completion rate increased by 15% this week compared to last week.
-          </p>
-        </div>
-
-        <div className="bg-warning-50 border border-warning-200 rounded-lg p-4">
-          <div className="flex items-center space-x-2 mb-2">
-            <Icon name="AlertTriangle" size={20} className="text-warning" />
-            <span className="font-medium text-warning">Attention Needed</span>
-          </div>
-          <p className="text-sm text-text-secondary">
-            Morning routine completion has been inconsistent for 3 days.
-          </p>
-        </div>
-
-        <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
-          <div className="flex items-center space-x-2 mb-2">
-            <Icon name="Target" size={20} className="text-primary" />
-            <span className="font-medium text-primary">Goal Progress</span>
-          </div>
-          <p className="text-sm text-text-secondary">
-            On track to achieve 85% completion rate goal by month end.
-          </p>
-        </div>
-      </div>
-
-      {/* Accessibility Description */}
-      <div className="sr-only">
-        <h3>Chart Data Summary</h3>
-        {activeChart === 'completion' && (
-          <p>
-            Weekly completion rates: Monday 80%, Tuesday 90%, Wednesday 70%, 
-            Thursday 100%, Friday 60%, Saturday 80%, Sunday 90%. 
-            Average completion rate is 81%.
-          </p>
-        )}
-        {activeChart === 'streak' && (
-          <p>
-            Streak progression over 6 weeks: Week 1: 5 days, Week 2: 7 days, 
-            Week 3: 3 days, Week 4: 12 days, Week 5: 8 days, Week 6: 15 days. 
-            Current streak is at its highest point.
-          </p>
-        )}
-        {activeChart === 'breakdown' && (
-          <p>
-            Routine distribution: Morning Routine 35%, Work Tasks 25%, 
-            Exercise 20%, Evening Routine 15%, Self Care 5%.
-          </p>
-        )}
+          {exporting ? 'Exporting...' : 'Export Data'}
+        </Button>
       </div>
     </div>
   );

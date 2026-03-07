@@ -21,7 +21,14 @@ const StreakCalendar = ({ streakData, currentStreak = 0, longestStreak = 0 }) =>
   };
 
   const getStreakStatus = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const today = new Date();
+    const dateDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    if (dateDay > todayDay) return 'none';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
     return streakData[dateStr] || 'none';
   };
 
