@@ -7,7 +7,8 @@ const AccessibilitySection = ({
   settings, 
   onSettingChange, 
   isExpanded, 
-  onToggleExpanded 
+  onToggleExpanded,
+  allowThemeChanges = true
 }) => {
   const [previewText, setPreviewText] = useState("This is how your text will appear with the selected font size.");
 
@@ -87,19 +88,26 @@ const AccessibilitySection = ({
         <div id="accessibility-settings" className="px-6 pb-6 space-y-6">
           {/* Theme Selection */}
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-text-primary">
-              Theme Preference
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-text-primary">
+                Theme Preference
+              </label>
+              {!allowThemeChanges && (
+                <span className="text-xs text-warning-600 bg-warning-50 px-2 py-1 rounded">Not included in your plan</span>
+              )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {themeOptions.map((option) => {
                 const isSelected = settings.theme === option.value;
                 return (
                   <button
                     key={option.value}
-                    onClick={() => handleThemeChange(option.value)}
+                    onClick={() => allowThemeChanges && handleThemeChange(option.value)}
+                    disabled={!allowThemeChanges}
                     className={`
                       flex items-center space-x-3 p-4 rounded-lg border-2 text-left
                       transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary
+                      ${!allowThemeChanges ? 'opacity-60 cursor-not-allowed' : ''}
                       ${isSelected
                         ? 'border-primary bg-primary-50'
                         : 'border-border hover:border-primary-200 hover:bg-surface-secondary'

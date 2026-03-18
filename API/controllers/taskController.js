@@ -2,6 +2,7 @@
 const Task = require('../models/Task');
 const Routine = require('../models/Routine');
 const Activity = require('../models/UserActivity');
+const { checkTasksLimit } = require('../utils/planLimits');
 const calculateStreak = require('../utils/streakCalculator');
 const unlockBadges = require('../utils/badgeUnlocker');
 const UserAssignment = require('../models/UserAssignment');
@@ -154,6 +155,15 @@ exports.create = async (req, res) => {
     
     if (!routineDoc.user.equals(userId)) {
       return res.status(403).json({ error: 'Unauthorized to create task for this routine' });
+    }
+
+    const tasksLimit = await checkTasksLimit(routine);
+    if (!tasksLimit.allowed) {
+      return res.status(403).json({
+        error: tasksLimit.planName
+          ? `Task limit per routine reached (${tasksLimit.current}/${tasksLimit.max}). Your ${tasksLimit.planName} plan allows ${tasksLimit.max} tasks per routine. Upgrade for more.`
+          : 'Task limit per routine reached. Upgrade your plan for more tasks.'
+      });
     }
     
     // Create task with user and routine

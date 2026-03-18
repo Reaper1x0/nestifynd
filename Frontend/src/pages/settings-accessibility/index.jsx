@@ -71,6 +71,7 @@ const SettingsAccessibilityPage = () => {
   const { user: authUser } = useAuth();
   const { settings: themeSettings, updateSettings: updateThemeSettings, uiModes, getUiModeForTheme } = useTheme();
   const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS });
+  const [planLimits, setPlanLimits] = useState(null);
   const loadedFromBackend = useRef(false);
 
   const [expandedSections, setExpandedSections] = useState({
@@ -89,6 +90,18 @@ const SettingsAccessibilityPage = () => {
       loadedFromBackend.current = true;
     }
   }, [themeSettings]);
+
+  useEffect(() => {
+    const loadPlanLimits = async () => {
+      try {
+        const { data } = await axiosClient.get('/api/auth/plan-limits');
+        setPlanLimits(data || null);
+      } catch {
+        setPlanLimits(null);
+      }
+    };
+    loadPlanLimits();
+  }, []);
 
   useEffect(() => {
     if (!loadedFromBackend.current) {
@@ -247,6 +260,7 @@ const SettingsAccessibilityPage = () => {
             onSettingChange={handleSettingChange}
             isExpanded={expandedSections.accessibility}
             onToggleExpanded={() => handleSectionToggle('accessibility')}
+            allowThemeChanges={planLimits?.customization?.allowThemeChanges !== false}
           />
 
           <AppearanceSection
@@ -254,6 +268,7 @@ const SettingsAccessibilityPage = () => {
             onSettingChange={handleSettingChange}
             isExpanded={expandedSections.appearance}
             onToggleExpanded={() => handleSectionToggle('appearance')}
+            allowColorChanges={planLimits?.customization?.allowColorChanges !== false}
           />
 
           <NotificationSection

@@ -14,6 +14,7 @@ router.get('/users/:userId/progress', ctrl.getUserProgress);
 router.get('/users/:userId/routines', ctrl.getUserRoutinesWithTasks);
 router.get('/users', ctrl.listUsers);
 router.get('/assignments', ctrl.listAssignments);
+router.get('/statistics', ctrl.getStatistics);
 router.get('/routines', ctrl.listRoutines);
 router.put('/update-user-plan', ctrl.updateUserPlan);
 router.put('/assign-role', ctrl.assignRole);

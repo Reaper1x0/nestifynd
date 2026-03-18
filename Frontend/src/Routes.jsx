@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import RoleBasedRouter from "components/ui/RoleBasedRouter";
 import AccessibilityNavWrapper from "components/ui/AccessibilityNavWrapper";
 import ProtectedRoute from "components/ProtectedRoute";
+import PlanAIGuard from "components/PlanAIGuard";
 import RedirectByAuth from "components/RedirectByAuth";
 import LoginRegistration from "pages/login-registration";
 import ForgotPassword from "pages/forgot-password";
@@ -49,8 +50,8 @@ const Routes = () => {
               <Route path="/routines" element={<ProtectedRoute><RoutinesList /></ProtectedRoute>} />
               <Route path="/routines/:id" element={<ProtectedRoute><RoutineDetail /></ProtectedRoute>} />
               <Route path="/routine-builder" element={<ProtectedRoute><RoutineBuilder /></ProtectedRoute>} />
-              <Route path="/ai-routine" element={<ProtectedRoute><AIRoutine /></ProtectedRoute>} />
-              <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
+              <Route path="/ai-routine" element={<ProtectedRoute><PlanAIGuard feature="routine"><AIRoutine /></PlanAIGuard></ProtectedRoute>} />
+              <Route path="/ai-chat" element={<ProtectedRoute><PlanAIGuard feature="chat"><AIChat /></PlanAIGuard></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </RouterRoutes>
           </RoleBasedRouter>

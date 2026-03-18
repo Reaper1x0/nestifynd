@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const { checkColorChangeAllowed, checkThemeChangeAllowed, getPlanLimitsForUser, checkTherapistLimit, checkCaregiverLimit, checkRoutinesLimit } = require('../utils/planLimits');
 
 /**
  * @swagger
@@ -96,7 +97,15 @@ const register = async (req, res) => {
         name: 'Free',
         price: 0,
         interval: 'month',
-        features: ['Limited routines', 'Basic reminders']
+        isActive: true,
+        features: ['1 routine', '5 tasks per routine', 'Basic reminders'],
+        limits: {
+          therapist: { allowed: false, maxAllowed: 0 },
+          caregiver: { allowed: false, maxAllowed: 0 },
+          routines: 1,
+          tasksPerRoutine: 5
+        },
+        customization: { allowColorChanges: false, allowThemeChanges: true }
       });
       await userPlan.save();
     }
@@ -289,10 +298,25 @@ const getSettings = async (req, res) => {
 
 const updateSettings = async (req, res) => {
   try {
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.userId).populate('plan');
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
     const { motivationalOptIn, ...settingsBody } = req.body;
+
+    const [allowColors, allowTheme] = await Promise.all([
+      checkColorChangeAllowed(req.userId),
+      checkThemeChangeAllowed(req.userId)
+    ]);
+
+    if (!allowColors) {
+      delete settingsBody.routineColors;
+      delete settingsBody.completionColors;
+      delete settingsBody.uiColors;
+    }
+    if (!allowTheme) {
+      delete settingsBody.theme;
+    }
+
     user.settings = { ...(user.settings || {}), ...settingsBody };
     user.markModified('settings');
     if (typeof motivationalOptIn === 'boolean') user.motivationalOptIn = motivationalOptIn;
@@ -371,4 +395,37 @@ const deleteAccount = async (req, res) => {
   }
 };
 
-module.exports = { register, login, forgotPassword, resetPassword, getProfile, updateProfile, getSettings, updateSettings, exportData, deleteAccount };
+const getPlanLimits = async (req, res) => {
+  try {
+    const planData = await getPlanLimitsForUser(req.userId);
+    if (!planData) {
+      return res.json({
+        plan: { name: 'Unknown' },
+        limits: { therapist: { allowed: false, current: 0, max: 0 }, caregiver: { allowed: false, current: 0, max: 0 }, routines: { current: 0, max: 1 }, tasksPerRoutine: 5, allowAIRoutine: false, allowAIChat: false },
+        customization: { allowColorChanges: false, allowThemeChanges: true }
+      });
+    }
+    const [therapistLimit, caregiverLimit, routinesLimit] = await Promise.all([
+      checkTherapistLimit(req.userId),
+      checkCaregiverLimit(req.userId),
+      checkRoutinesLimit(req.userId)
+    ]);
+    res.json({
+      plan: { name: planData.name },
+      limits: {
+        therapist: { allowed: planData.limits.therapist.allowed, current: therapistLimit.current, max: planData.limits.therapist.maxAllowed },
+        caregiver: { allowed: planData.limits.caregiver.allowed, current: caregiverLimit.current, max: planData.limits.caregiver.maxAllowed },
+        routines: { current: routinesLimit.current, max: planData.limits.routines },
+        tasksPerRoutine: planData.limits.tasksPerRoutine,
+        allowAIRoutine: planData.limits.allowAIRoutine,
+        allowAIChat: planData.limits.allowAIChat
+      },
+      customization: planData.customization
+    });
+  } catch (err) {
+    console.error('Get plan limits error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+module.exports = { register, login, forgotPassword, resetPassword, getProfile, updateProfile, getSettings, updateSettings, getPlanLimits, exportData, deleteAccount };
