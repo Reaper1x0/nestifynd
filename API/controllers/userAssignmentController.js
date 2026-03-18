@@ -1,6 +1,6 @@
-
 const UserAssignment = require('../models/UserAssignment');
 const User = require('../models/User');
+const { checkTherapistLimit, checkCaregiverLimit } = require('../utils/planLimits');
 
 // POST /api/user-assignments
 // Supports: (1) User adds therapist/caregiver: userId=client, relatedUserId=therapist/caregiver
@@ -41,16 +41,49 @@ exports.createAssignment = async (req, res) => {
       relationshipType = roleName;
     }
 
+    // Plan-based limits: check the client's (effectiveUserId) plan
     if (relationshipType === 'therapist') {
-      const existing = await UserAssignment.findOne({
-        userId: effectiveUserId,
-        relationshipType: 'therapist',
-        isActive: true
-      });
-      if (existing) {
-        return res.status(400).json({ error: 'User already has a therapist assigned' });
+      const limit = await checkTherapistLimit(effectiveUserId);
+      if (!limit.allowed) {
+        return res.status(403).json({
+          error: limit.planName
+            ? `Therapist assignments are not included in the ${limit.planName} plan. Upgrade to Basic or Premium to add a therapist.`
+            : 'Therapist assignments are not allowed for this plan.'
+        });
+      }
+      if (limit.current >= limit.max) {
+        return res.status(403).json({
+          error: limit.max === 1
+            ? `Therapist limit reached. Your ${limit.planName || 'plan'} allows 1 therapist. Upgrade to add another.`
+            : `Therapist limit reached (${limit.current}/${limit.max}). Upgrade your plan for more.`
+        });
       }
     }
+
+    if (relationshipType === 'caregiver') {
+      const limit = await checkCaregiverLimit(effectiveUserId);
+      if (!limit.allowed) {
+        return res.status(403).json({
+          error: limit.planName
+            ? `Caregiver assignments are not included in the ${limit.planName} plan. Upgrade to Premium to add a caregiver.`
+            : 'Caregiver assignments are not allowed for this plan.'
+        });
+      }
+      if (limit.current >= limit.max) {
+        return res.status(403).json({
+          error: limit.max === 1
+            ? `Caregiver limit reached. Your ${limit.planName || 'plan'} allows 1 caregiver. Upgrade for more.`
+            : `Caregiver limit reached (${limit.current}/${limit.max}). Upgrade your plan for more.`
+        });
+      }
+    }
+
+    // Remove any existing assignment (e.g. inactive from a prior downgrade) so re-add after upgrade works
+    await UserAssignment.deleteMany({
+      userId: effectiveUserId,
+      relatedUserId: effectiveRelatedUserId,
+      relationshipType
+    });
 
     const newAssignment = await UserAssignment.create({
       userId: effectiveUserId,
@@ -68,7 +101,7 @@ exports.createAssignment = async (req, res) => {
 exports.getAssignments = async (req, res) => {
   try {
     const { userId } = req.params;
-    const assignments = await UserAssignment.find({ userId }).populate('relatedUserId');
+    const assignments = await UserAssignment.find({ userId, isActive: true }).populate('relatedUserId');
     res.json(assignments);
   } catch (error) {
     res.status(500).json({ error: error.message });

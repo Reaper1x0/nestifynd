@@ -4,6 +4,7 @@ const RoutineTemplate = require('../models/RoutineTemplate');
 const Routine = require('../models/Routine');
 const Task = require('../models/Task');
 const openaiHelper = require('../utils/openaiHelper');
+const { checkAIChatAllowed, checkAIRoutineAllowed } = require('../utils/planLimits');
 
 // Helper to fetch user's routine context for AI
 async function getUserRoutineContext(userId) {
@@ -74,6 +75,13 @@ async function getUserRoutineContext(userId) {
 exports.getChatHistory = async (req, res) => {
   try {
     const userId = req.user._id;
+    const isAdmin = req.user.role?.name === 'admin';
+    if (!isAdmin) {
+      const allowed = await checkAIChatAllowed(userId);
+      if (!allowed) {
+        return res.status(403).json({ message: 'AI Assistant is not included in your plan. Upgrade to Basic or Premium to use AI Chat.' });
+      }
+    }
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
     const messages = await AiChatMessage.find({ userId }).sort({ timestamp: 1 }).limit(limit).lean();
     res.json(messages);
@@ -97,6 +105,13 @@ exports.create = async (req, res) => {
 exports.chatWithAI = async (req, res) => {
   const { message } = req.body;
   const userId = req.user._id;
+  const isAdmin = req.user.role?.name === 'admin';
+  if (!isAdmin) {
+    const allowed = await checkAIChatAllowed(userId);
+    if (!allowed) {
+      return res.status(403).json({ message: 'AI Assistant is not included in your plan. Upgrade to Basic or Premium to use AI Chat.' });
+    }
+  }
 
   const openai = await openaiHelper.getOpenAIClient();
   if (!openai) {
@@ -192,6 +207,13 @@ ${userDataContext}`;
 exports.suggestRoutine = async (req, res) => {
   const { prompt } = req.body;
   const userId = req.user._id;
+  const isAdmin = req.user.role?.name === 'admin';
+  if (!isAdmin) {
+    const allowed = await checkAIRoutineAllowed(userId);
+    if (!allowed) {
+      return res.status(403).json({ message: 'AI Routine is not included in your plan. Upgrade to Premium to use AI Routine.' });
+    }
+  }
 
   const openai = await openaiHelper.getOpenAIClient();
   if (!openai) {
@@ -235,6 +257,13 @@ Reply with ONLY valid JSON, no markdown or extra text:
 exports.generateRoutineFromQa = async (req, res) => {
   const { answers } = req.body;
   const userId = req.user._id;
+  const isAdmin = req.user.role?.name === 'admin';
+  if (!isAdmin) {
+    const allowed = await checkAIRoutineAllowed(userId);
+    if (!allowed) {
+      return res.status(403).json({ message: 'AI Routine is not included in your plan. Upgrade to Premium to use AI Routine.' });
+    }
+  }
 
   const openai = await openaiHelper.getOpenAIClient();
   if (!openai) {

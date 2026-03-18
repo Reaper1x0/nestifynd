@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Helmet } from 'react-helmet';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../../components/ui/Header';
 import TabNavigation from '../../components/ui/TabNavigation';
 import WelcomeHeader from './components/WelcomeHeader';
@@ -11,6 +12,9 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const HomeDashboard = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const redirectMessage = location.state?.message;
   useEffect(() => {
     // Set focus to main content for accessibility
     const mainContent = document.getElementById('main-content');
@@ -40,6 +44,21 @@ const HomeDashboard = () => {
           role="main"
           tabIndex="-1"
         >
+          {redirectMessage && (
+            <div
+              role="alert"
+              className="mb-4 p-4 rounded-lg bg-primary-50 border border-primary-200 text-primary-800 flex items-center justify-between gap-3"
+            >
+              <span className="text-sm">{redirectMessage}</span>
+              <button
+                onClick={() => navigate('.', { replace: true, state: {} })}
+                className="text-primary-600 hover:text-primary-800 font-medium text-sm shrink-0"
+                aria-label="Dismiss"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
           {/* Welcome Section */}
           <WelcomeHeader userName={user?.name || user?.email} />
 

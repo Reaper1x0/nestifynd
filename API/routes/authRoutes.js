@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, forgotPassword, resetPassword, getProfile, updateProfile, getSettings, updateSettings, exportData, deleteAccount } = require('../controllers/authController');
+const { register, login, forgotPassword, resetPassword, getProfile, updateProfile, getSettings, updateSettings, getPlanLimits, exportData, deleteAccount } = require('../controllers/authController');
 const auth = require('../middlewares/auth');
 
 /**
@@ -113,6 +113,7 @@ router.get('/profile', auth, getProfile);
 router.put('/profile', auth, updateProfile);
 router.get('/settings', auth, getSettings);
 router.put('/settings', auth, updateSettings);
+router.get('/plan-limits', auth, getPlanLimits);
 router.post('/export', auth, exportData);
 router.delete('/account', auth, deleteAccount);
 

@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Activity = require('../models/UserActivity');
 const UserAssignment = require('../models/UserAssignment');
 const Task = require('../models/Task');
+const { checkRoutinesLimit, checkTasksLimit } = require('../utils/planLimits');
 
 exports.getAll = async (req, res) => {
   try {
@@ -46,6 +47,15 @@ exports.create = async (req, res) => {
   try {
     const userId = req.user._id;
     const { user, ...routineData } = req.body;
+
+    const routinesLimit = await checkRoutinesLimit(userId);
+    if (!routinesLimit.allowed) {
+      return res.status(403).json({
+        error: routinesLimit.planName
+          ? `Routine limit reached (${routinesLimit.current}/${routinesLimit.max}). Your ${routinesLimit.planName} plan allows ${routinesLimit.max} routine(s). Upgrade for more.`
+          : 'Routine limit reached. Upgrade your plan for more routines.'
+      });
+    }
     
     // Create routine with user and creator
     const routine = new Routine({
@@ -208,6 +218,15 @@ exports.createUserRoutine = async (req, res) => {
       }
     }
 
+    const routinesLimit = await checkRoutinesLimit(userId);
+    if (!routinesLimit.allowed) {
+      return res.status(403).json({
+        error: routinesLimit.planName
+          ? `Routine limit reached for this user (${routinesLimit.current}/${routinesLimit.max}). Their ${routinesLimit.planName} plan allows ${routinesLimit.max} routine(s).`
+          : 'Routine limit reached for this user. They need to upgrade their plan.'
+      });
+    }
+
     const routine = new Routine({
       ...routineData,
       user: userId,
@@ -216,6 +235,18 @@ exports.createUserRoutine = async (req, res) => {
     await routine.save();
 
     const tasks = Array.isArray(tasksData) ? tasksData : [];
+    if (tasks.length > 0) {
+      const tasksLimit = await checkTasksLimit(routine._id);
+      const wouldExceed = tasksLimit.current + tasks.length > tasksLimit.max;
+      if (wouldExceed) {
+        await Routine.findByIdAndDelete(routine._id);
+        return res.status(403).json({
+          error: tasksLimit.planName
+            ? `Task limit per routine exceeded. The user's ${tasksLimit.planName} plan allows ${tasksLimit.max} tasks per routine. Requested ${tasks.length} tasks would exceed the limit.`
+            : 'Task limit per routine exceeded. User needs to upgrade their plan.'
+        });
+      }
+    }
     for (let i = 0; i < tasks.length; i++) {
       const t = tasks[i];
       const task = new Task({
@@ -322,6 +353,15 @@ exports.createUserTask = async (req, res) => {
     const routine = await Routine.findById(routineId);
     if (!routine || !routine.user.equals(userId)) {
       return res.status(404).json({ error: 'Routine not found' });
+    }
+
+    const tasksLimit = await checkTasksLimit(routineId);
+    if (!tasksLimit.allowed) {
+      return res.status(403).json({
+        error: tasksLimit.planName
+          ? `Task limit per routine reached (${tasksLimit.current}/${tasksLimit.max}). The user's ${tasksLimit.planName} plan allows ${tasksLimit.max} tasks per routine.`
+          : 'Task limit per routine reached. User needs to upgrade their plan.'
+      });
     }
 
     const task = new Task({

@@ -9,6 +9,7 @@ import ReportsView from './components/ReportsView';
 import PlansView from './components/PlansView';
 import AssignmentsView from './components/AssignmentsView';
 import AdminAIView from './components/AdminAIView';
+import StatisticsView from './components/StatisticsView';
 import axiosClient from '../../api/axiosClient';
 
 const AdminDashboard = () => {
@@ -64,6 +65,7 @@ const AdminDashboard = () => {
 
   const viewOptions = [
     { id: 'users', label: 'Users', icon: 'Users' },
+    { id: 'statistics', label: 'Statistics', icon: 'BarChart3' },
     { id: 'reports', label: 'Reports', icon: 'FileText' },
     { id: 'plans', label: 'Plans', icon: 'CreditCard' },
     { id: 'assignments', label: 'Assignments', icon: 'UserPlus' },
@@ -74,10 +76,12 @@ const AdminDashboard = () => {
     switch (activeView) {
       case 'users':
         return <AdminUsersView onUpdate={loadStats} accessibilitySettings={accessibilitySettings} />;
+      case 'statistics':
+        return <StatisticsView accessibilitySettings={accessibilitySettings} />;
       case 'reports':
         return <ReportsView accessibilitySettings={accessibilitySettings} />;
       case 'plans':
-        return <PlansView accessibilitySettings={accessibilitySettings} />;
+        return <PlansView accessibilitySettings={accessibilitySettings} onUpdate={loadStats} />;
       case 'assignments':
         return <AssignmentsView onUpdate={loadStats} accessibilitySettings={accessibilitySettings} />;
       case 'ai':

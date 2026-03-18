@@ -11,6 +11,7 @@ const Header = () => {
   const navigate = useNavigate();
   const { userRole } = useRole();
   const { user, logout } = useAuth();
+  const [planLimits, setPlanLimits] = useState(null);
   const [notifications, setNotifications] = useState({
     messages: 0,
     achievements: 0,
@@ -32,9 +33,15 @@ const Header = () => {
 
   useEffect(() => {
     fetchNotificationCounts();
-    // Refresh counts every 30 seconds
     const interval = setInterval(fetchNotificationCounts, 30000);
     return () => clearInterval(interval);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    axiosClient.get('/api/auth/plan-limits').then((res) => {
+      setPlanLimits(res.data || null);
+    }).catch(() => setPlanLimits(null));
   }, [user]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [accessibilitySettings, setAccessibilitySettings] = useState({
@@ -175,9 +182,16 @@ const Header = () => {
     navigate('/login', { replace: true });
   };
 
-  const filteredNavItems = navigationItems.filter(item => 
-    !item.roleRequired || item.roleRequired === userRole
-  );
+  const filteredNavItems = navigationItems.filter((item) => {
+    if (item.roleRequired && item.roleRequired !== userRole) return false;
+    if (item.path === '/ai-routine' && userRole === 'user') {
+      if (planLimits?.limits?.allowAIRoutine !== true) return false;
+    }
+    if (item.path === '/ai-chat' && userRole === 'user') {
+      if (planLimits?.limits?.allowAIChat !== true) return false;
+    }
+    return true;
+  });
 
   const currentItem = navigationItems.find(item => item.path === location.pathname);
 

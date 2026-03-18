@@ -6,7 +6,8 @@ const AppearanceSection = ({
   settings, 
   onSettingChange, 
   isExpanded, 
-  onToggleExpanded 
+  onToggleExpanded,
+  allowColorChanges = true
 }) => {
   const [selectedColorCategory, setSelectedColorCategory] = useState('routine');
 
@@ -150,8 +151,14 @@ const AppearanceSection = ({
 
       {isExpanded && (
         <div id="appearance-settings" className="px-6 pb-6 space-y-6">
+          {!allowColorChanges && (
+            <div className="p-4 bg-warning-50 border border-warning-200 rounded-lg text-warning-800 text-sm flex items-center gap-2">
+              <Icon name="Lock" size={18} className="flex-shrink-0" />
+              Color customization is not included in your plan. Upgrade to Premium to customize colors.
+            </div>
+          )}
           {/* Preset Themes */}
-          <div className="space-y-3">
+          <div className={`space-y-3 ${!allowColorChanges ? 'pointer-events-none opacity-60' : ''}`}>
             <label className="block text-sm font-medium text-text-primary">
               Quick Themes
             </label>
@@ -182,7 +189,7 @@ const AppearanceSection = ({
           </div>
 
           {/* Color Category Selection */}
-          <div className="space-y-3">
+          <div className={`space-y-3 ${!allowColorChanges ? 'pointer-events-none opacity-60' : ''}`}>
             <label className="block text-sm font-medium text-text-primary">
               Customize Colors
             </label>
@@ -209,7 +216,7 @@ const AppearanceSection = ({
 
           {/* Color Customization */}
           {selectedCategory && (
-            <div className="space-y-4">
+            <div className={`space-y-4 ${!allowColorChanges ? 'pointer-events-none opacity-60' : ''}`}>
               <div>
                 <h3 className="text-sm font-medium text-text-primary mb-1">
                   {selectedCategory.label}
@@ -261,7 +268,7 @@ const AppearanceSection = ({
           )}
 
           {/* Color Accessibility Check */}
-          <div className="p-4 bg-warning-50 border border-warning-200 rounded-lg">
+          <div className={`p-4 bg-warning-50 border border-warning-200 rounded-lg ${!allowColorChanges ? 'pointer-events-none opacity-60' : ''}`}>
             <div className="flex items-start space-x-3">
               <Icon name="AlertTriangle" size={20} className="text-warning flex-shrink-0 mt-0.5" />
               <div>
@@ -277,7 +284,7 @@ const AppearanceSection = ({
           </div>
 
           {/* Reset Button */}
-          <div className="flex justify-end pt-4 border-t border-border">
+          <div className={`flex justify-end pt-4 border-t border-border ${!allowColorChanges ? 'pointer-events-none opacity-60' : ''}`}>
             <Button
               variant="outline"
               onClick={resetToDefaults}

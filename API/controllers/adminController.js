@@ -435,6 +435,22 @@ exports.listRoutines = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
+/**
+ * When plan does not allow therapist/caregiver, remove those assignments entirely
+ * so the user can add them again after upgrading (avoids duplicate key on re-add).
+ */
+async function revokeAssignmentsNotAllowedByPlan(userId, plan) {
+  const limits = plan?.limits || {};
+  const therapistAllowed = limits.therapist?.allowed && (limits.therapist?.maxAllowed ?? 0) > 0;
+  const caregiverAllowed = limits.caregiver?.allowed && (limits.caregiver?.maxAllowed ?? 0) > 0;
+  if (!therapistAllowed) {
+    await UserAssignment.deleteMany({ userId, relationshipType: 'therapist' });
+  }
+  if (!caregiverAllowed) {
+    await UserAssignment.deleteMany({ userId, relationshipType: 'caregiver' });
+  }
+}
+
 exports.updateUserPlan = async (req, res) => {
   try {
     const { userId, planId } = req.body;
@@ -446,6 +462,7 @@ exports.updateUserPlan = async (req, res) => {
       .populate('role', 'name')
       .populate('plan', 'name price');
     if (!updated) return res.status(404).json({ error: 'User not found' });
+    await revokeAssignmentsNotAllowedByPlan(userId, plan);
     res.json(updated);
   } catch (err) {
     console.error('Admin updateUserPlan error:', err);
@@ -590,9 +607,129 @@ exports.downgradePlan = async (req, res) => {
       .populate('role', 'name')
       .populate('plan', 'name price');
     if (!user) return res.status(404).json({ error: 'User not found' });
+    await revokeAssignmentsNotAllowedByPlan(userId, freePlan);
     res.json(user);
   } catch (err) {
     console.error('Admin downgradePlan error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Get statistics - Admin only
+ * Query: period = 'week' | 'month' | 'year'
+ */
+exports.getStatistics = async (req, res) => {
+  try {
+    const period = (req.query.period || 'month').toLowerCase();
+    const validPeriods = ['week', 'month', 'year'];
+    const p = validPeriods.includes(period) ? period : 'month';
+
+    const now = new Date();
+    let startDate = new Date(now);
+    if (p === 'week') startDate.setDate(now.getDate() - 7);
+    else if (p === 'month') startDate.setMonth(now.getMonth() - 1);
+    else startDate.setFullYear(now.getFullYear() - 1);
+
+    const [totalUsers, newUsers, paidPlans, usersRaw] = await Promise.all([
+      User.countDocuments({ isActive: { $ne: false } }),
+      User.countDocuments({ createdAt: { $gte: startDate }, isActive: { $ne: false } }),
+      Plan.find({ name: { $in: ['Basic', 'Premium'] } }).select('_id'),
+      User.find({ isActive: { $ne: false } })
+        .select('name email createdAt plan')
+        .populate('role', 'name displayName')
+        .populate('plan', 'name price')
+        .sort({ createdAt: -1 })
+        .lean()
+    ]);
+
+    const paidPlanIds = paidPlans.map((p) => p._id);
+    const subscribedCount = paidPlanIds.length
+      ? await User.countDocuments({ plan: { $in: paidPlanIds }, isActive: { $ne: false } })
+      : 0;
+
+    const usersWithPlans = usersRaw.map((u) => {
+      const planName = (u.plan && (u.plan.name === 'Free' || u.plan.name === 'Basic' || u.plan.name === 'Premium'))
+        ? u.plan.name
+        : 'Free';
+      const planPrice = u.plan?.price ?? (planName === 'Free' ? 0 : 0);
+      return {
+        id: u._id,
+        name: u.name || '-',
+        email: u.email || '-',
+        planName,
+        planPrice,
+        roleName: u.role?.displayName || u.role?.name || 'User',
+        createdAt: u.createdAt
+      };
+    });
+
+    const planCounts = {};
+    usersWithPlans.forEach((u) => {
+      const name = ['Free', 'Basic', 'Premium'].includes(u.planName) ? u.planName : 'Free';
+      planCounts[name] = (planCounts[name] || 0) + 1;
+    });
+    const planColors = { Free: '#94A3B8', Basic: '#4F46E5', Premium: '#10B981' };
+    const planDistribution = Object.entries(planCounts).map(([name, count]) => ({
+      name,
+      count,
+      fill: planColors[name] || '#6B7280'
+    }));
+
+    let newUsersTrend = [];
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - 6);
+    weekStart.setHours(0, 0, 0, 0);
+    if (p === 'week') {
+      const weekStartUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6, 0, 0, 0, 0));
+      const agg = await User.aggregate([
+        { $match: { createdAt: { $gte: weekStartUTC }, isActive: { $ne: false } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'UTC' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+      ]);
+      const byDate = {};
+      agg.forEach((r) => { byDate[r._id] = r.count; });
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i, 0, 0, 0, 0));
+        const key = d.toISOString().slice(0, 10);
+        newUsersTrend.push({ label: d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }), count: byDate[key] || 0 });
+      }
+    } else if (p === 'month' || p === 'year') {
+      const months = p === 'month' ? 4 : 12;
+      const agg = await User.aggregate([
+        {
+          $match: {
+            createdAt: {
+              $gte: new Date(now.getFullYear(), now.getMonth() - months, 1),
+              $lte: now
+            },
+            isActive: { $ne: false }
+          }
+        },
+        { $group: { _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } }, count: { $sum: 1 } } },
+        { $sort: { '_id.year': 1, '_id.month': 1 } }
+      ]);
+      const byMonth = {};
+      agg.forEach((r) => { byMonth[`${r._id.year}-${r._id.month}`] = r.count; });
+      for (let i = months - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
+        newUsersTrend.push({ label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), count: byMonth[key] || 0 });
+      }
+    }
+
+    res.json({
+      totalUsers,
+      newUsers,
+      subscribedUsers: subscribedCount,
+      period: p,
+      startDate: startDate.toISOString(),
+      usersWithPlans,
+      planDistribution,
+      newUsersTrend
+    });
+  } catch (err) {
+    console.error('Admin getStatistics error:', err);
     res.status(500).json({ error: err.message });
   }
 };
